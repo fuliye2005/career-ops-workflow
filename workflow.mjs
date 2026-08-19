@@ -14,14 +14,24 @@ const SUPPORTED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', 
 function pathsFor(root = ROOT) {
   const data = join(root, 'data', 'workflow');
   const output = join(root, 'output', 'workflow');
-  const inbox = join(root, 'jds');
+  const input = join(root, 'workflow-input');
+  const personalInfoDir = join(input, 'personal-info');
+  const inbox = join(input, 'jd');
+  const photos = join(input, 'photos');
   const legacyInbox = join(root, 'data', 'job-inbox');
+  const legacyProjectInbox = join(root, 'jds');
   return {
     root,
+    input,
+    personalInfoDir,
+    personalInfoFile: join(personalInfoDir, 'personal-info.md'),
     inbox,
+    photos,
     jobsFile: join(inbox, 'jobs.txt'),
     legacyInbox,
+    legacyProjectInbox,
     legacyJobsFile: join(legacyInbox, 'jobs.txt'),
+    legacyProjectJobsFile: join(legacyProjectInbox, 'jobs.txt'),
     data,
     jobsIndex: join(data, 'jobs.json'),
     records: join(data, 'records'),
@@ -63,6 +73,33 @@ function safeId(value, fallback = 'job') {
     .replace(/[^A-Za-z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : slugify(value, fallback);
+}
+
+function safeFileName(value, fallback = '岗位') {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/[<>:"\/\\|?*\u0000-\u001F]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/-{2,}/g, '-')
+    .replace(/[. ]+$/g, '');
+  if (!cleaned || cleaned === '.' || cleaned === '..') return fallback;
+  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(cleaned)) return `${fallback}-${cleaned}`;
+  return cleaned;
+}
+
+function resumeFileName(record, stage, version = 1) {
+  const role = safeFileName(record?.role || record?.title || record?.company || record?.id, '岗位');
+  const versionSuffix = version > 1 ? `.v${version}` : '';
+  return `${role}-${stage}${versionSuffix}`;
+}
+
+function resolveResumeArtifact(record, artifactKey, root, id, stage, extension, legacyName) {
+  const recorded = record?.artifacts?.[artifactKey];
+  if (recorded) return resolveWorkspacePath(root, recorded, join('output', 'workflow', id, legacyName));
+  const outputDir = join(pathsFor(root).output, id);
+  const namedPath = join(outputDir, `${resumeFileName(record, stage)}.${extension}`);
+  const legacyPath = join(outputDir, legacyName);
+  return existsSync(namedPath) || !existsSync(legacyPath) ? namedPath : legacyPath;
 }
 
 function hashId(value) {
@@ -132,23 +169,35 @@ function parseJobsFile(text) {
 }
 
 async function inspectProfile(root = ROOT) {
+  const paths = pathsFor(root);
+  const personalInfo = paths.personalInfoFile;
+  const legacyCv = join(root, 'cv.md');
+  const personalText = existsSync(personalInfo) ? await readFile(personalInfo, 'utf8') : '';
+  const placeholder = /请将本文件替换|请填写|replace this file|your (personal|resume) information|待填写|placeholder/i.test(personalText);
+  const candidateFile = existsSync(legacyCv) && (!personalText.trim() || placeholder) ? legacyCv : personalInfo;
   const files = {
-    cv: join(root, 'cv.md'),
+    cv: candidateFile,
+    personalInfo,
     config: join(root, 'config', 'profile.yml'),
     mode: join(root, 'modes', '_profile.md'),
   };
-  const missing = Object.entries(files).filter(([, filePath]) => !existsSync(filePath)).map(([name]) => name);
-  let cvText = '';
-  if (existsSync(files.cv)) cvText = await readFile(files.cv, 'utf8');
-  const incomplete = !cvText.trim() || !/##\s+(Professional Summary|Core Skills|Work Experience|Projects)/i.test(cvText);
+  const missing = [];
+  if (!existsSync(candidateFile)) missing.push('cv');
+  for (const key of ['config', 'mode']) {
+    if (!existsSync(files[key])) missing.push(key);
+  }
+  const cvText = existsSync(candidateFile) ? await readFile(candidateFile, 'utf8') : '';
+  const isPlaceholder = /请将本文件替换|请填写|replace this file|your (personal|resume) information|待填写|placeholder/i.test(cvText);
+  const hasProfileSections = /##\s+(Professional Summary|Core Skills|Work Experience|Projects|个人简介|核心能力|工作经历|项目经历)/i.test(cvText);
+  const incomplete = !cvText.trim() || isPlaceholder || !hasProfileSections;
   return {
     ready: missing.length === 0 && !incomplete,
     missing,
     incomplete,
+    source: relative(root, candidateFile).split(sep).join('/'),
     files: Object.fromEntries(Object.entries(files).map(([name, filePath]) => [name, relative(root, filePath).split(sep).join('/')])),
   };
 }
-
 function groupAttachment(fileName, knownIds) {
   const base = fileName.replace(/\.[^.]+$/, '');
   const match = [...knownIds]
@@ -160,31 +209,40 @@ function groupAttachment(fileName, knownIds) {
 async function ensureWorkspace(root = ROOT) {
   const paths = pathsFor(root);
   await Promise.all([
+    mkdir(paths.personalInfoDir, { recursive: true }),
     mkdir(paths.inbox, { recursive: true }),
+    mkdir(paths.photos, { recursive: true }),
     mkdir(paths.records, { recursive: true }),
     mkdir(paths.runs, { recursive: true }),
     mkdir(paths.output, { recursive: true }),
   ]);
+  if (!existsSync(paths.personalInfoFile)) {
+    const templatePath = join(paths.personalInfoDir, 'personal-info-template.md');
+    if (existsSync(templatePath)) await writeFile(paths.personalInfoFile, await readFile(templatePath, 'utf8'), 'utf8');
+    else await writeFile(paths.personalInfoFile, '# 个人信息\n\n请填写求职者自己的 Markdown 个人信息。\n', 'utf8');
+  }
   if (!existsSync(paths.jobsFile)) {
-    if (existsSync(paths.legacyJobsFile)) {
+    if (existsSync(paths.legacyProjectJobsFile)) {
+      await rename(paths.legacyProjectJobsFile, paths.jobsFile);
+    } else if (existsSync(paths.legacyJobsFile)) {
       await rename(paths.legacyJobsFile, paths.jobsFile);
     } else {
       await writeFile(paths.jobsFile, '# One job URL per line. The workflow creates the internal job ID automatically.\n# https://example.com/jobs/123\n', 'utf8');
     }
   }
-  if (existsSync(paths.legacyInbox)) {
-    const legacyEntries = await readdir(paths.legacyInbox, { withFileTypes: true });
-    for (const entry of legacyEntries) {
-      if (!entry.isFile() || entry.name.toLowerCase() === 'jobs.txt') continue;
+  for (const sourceDir of [paths.legacyProjectInbox, paths.legacyInbox]) {
+    if (!existsSync(sourceDir) || resolve(sourceDir) === resolve(paths.inbox)) continue;
+    const entries = await readdir(sourceDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile() || ['jobs.txt', 'readme.md'].includes(entry.name.toLowerCase())) continue;
       if (!SUPPORTED_EXTENSIONS.has(extname(entry.name).toLowerCase())) continue;
-      const source = join(paths.legacyInbox, entry.name);
+      const source = join(sourceDir, entry.name);
       const target = join(paths.inbox, entry.name);
       if (!existsSync(target)) await rename(source, target);
     }
   }
   return paths;
 }
-
 async function ingest(root = ROOT) {
   const paths = await ensureWorkspace(root);
   const jobsText = await readFile(paths.jobsFile, 'utf8');
@@ -201,7 +259,7 @@ async function ingest(root = ROOT) {
     const bucket = attachmentsById.get(id) || [];
     bucket.push({
       name: entry.name,
-      path: join('jds', entry.name).split(sep).join('/'),
+      path: relative(root, join(paths.inbox, entry.name)).split(sep).join('/'),
       type: attachmentType(entry.name),
     });
     attachmentsById.set(id, bucket);
@@ -267,7 +325,7 @@ function recommendationFor(score) {
 }
 
 function hasResumeArtifacts(artifacts = {}) {
-  return ['generatedHtml', 'editableHtml', 'finalHtml', 'pdf'].some(key => Boolean(artifacts[key]));
+  return ['generatedHtml', 'editableHtml', 'finalHtml', 'pdf', 'word'].some(key => Boolean(artifacts[key]));
 }
 
 function assertResumeGate(record) {
@@ -396,6 +454,7 @@ function recordLinks(record, summaryFile, root) {
   add('可编辑', record.artifacts?.editableHtml);
   add('最终简历', record.artifacts?.finalHtml);
   add('PDF', record.artifacts?.pdf);
+  add('Word', record.artifacts?.word);
   return links;
 }
 
@@ -489,10 +548,9 @@ async function prepareEditable(jobId, root = ROOT) {
   const record = await readJson(recordFile);
   if (!record) throw new Error(`Workflow record not found: ${jobId}`);
   assertResumeGate(record);
-  const generated = resolveWorkspacePath(root, record.artifacts?.generatedHtml, join('output', 'workflow', id, 'cv.generated.html'));
+  const generated = resolveResumeArtifact(record, 'generatedHtml', root, id, '生成版', 'html', 'cv.generated.html');
   if (!existsSync(generated)) throw new Error(`Generated HTML not found: ${generated}`);
-  const outputDir = join(paths.output, id);
-  const editable = join(outputDir, 'cv.editable.html');
+  const editable = resolveResumeArtifact(record, 'editableHtml', root, id, '可编辑', 'html', 'cv.editable.html');
   if (!existsSync(editable)) {
     const source = await readFile(generated, 'utf8');
     await writeAtomic(editable, editableInjection(source, id));
@@ -517,12 +575,12 @@ async function saveFinalHtml(jobId, html, root = ROOT) {
   assertResumeGate(record);
   const outputDir = join(paths.output, id);
   await mkdir(outputDir, { recursive: true });
-  const baseFinalPath = join(outputDir, 'cv.final.html');
+  const baseFinalPath = join(outputDir, `${resumeFileName(record, '最终版')}.html`);
   let finalPath = baseFinalPath;
   let version = 1;
   while (existsSync(finalPath)) {
     version++;
-    finalPath = join(outputDir, `cv.final.v${version}.html`);
+    finalPath = join(outputDir, `${resumeFileName(record, '最终版', version)}.html`);
   }
   const cleanedHtml = cleanEditableHtml(html);
   await writeAtomic(finalPath, cleanedHtml);
@@ -558,6 +616,31 @@ function cleanEditableHtml(html) {
     });
 }
 
+async function renderWord(jobId, root = ROOT) {
+  const paths = pathsFor(root);
+  const id = await resolveRecordId(jobId, root, 'finalHtml');
+  const recordFile = join(paths.records, `${id}.json`);
+  const record = await readJson(recordFile);
+  if (!record) throw new Error(`Workflow record not found: ${jobId}`);
+  assertResumeGate(record);
+  const finalPath = resolveResumeArtifact(record, 'finalHtml', root, id, '最终版', 'html', 'cv.final.html');
+  if (!existsSync(finalPath)) throw new Error(`Final HTML is not confirmed: ${finalPath}`);
+  const wordPath = join(paths.output, id, `${resumeFileName(record, '最终版')}.docx`);
+  const result = spawnSync(process.execPath, [
+    join(ROOT, 'generate-word.mjs'),
+    '--html', finalPath,
+    '--output', wordPath,
+    '--photo-dir', paths.photos,
+  ], { cwd: root, encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(result.stderr || result.stdout || `Word generation failed with ${result.status}`);
+  record.artifacts = { ...(record.artifacts || {}), word: relative(root, wordPath).split(sep).join('/') };
+  record.resumeStatus = '已生成 Word';
+  record.updatedAt = new Date().toISOString();
+  await writeAtomic(recordFile, JSON.stringify(record, null, 2) + '\n');
+  await writeMetadata(record, root);
+  await renderSummary(root);
+  return { path: relative(root, wordPath).split(sep).join('/'), output: result.stdout };
+}
 async function renderPdf(jobId, root = ROOT) {
   const paths = pathsFor(root);
   const id = await resolveRecordId(jobId, root, 'finalHtml');
@@ -565,11 +648,11 @@ async function renderPdf(jobId, root = ROOT) {
   const record = await readJson(recordFile);
   if (!record) throw new Error(`Workflow record not found: ${jobId}`);
   assertResumeGate(record);
-  const finalPath = resolveWorkspacePath(root, record.artifacts?.finalHtml, join('output', 'workflow', id, 'cv.final.html'));
+  const finalPath = resolveResumeArtifact(record, 'finalHtml', root, id, '最终版', 'html', 'cv.final.html');
   if (!existsSync(finalPath)) throw new Error(`Final HTML is not confirmed: ${finalPath}`);
   const factCheck = spawnSync(process.execPath, ['verify-cv-facts.mjs', finalPath], { cwd: root, encoding: 'utf8' });
   if (factCheck.status !== 0) throw new Error(factCheck.stderr || factCheck.stdout || 'CV fact check failed');
-  const pdfPath = join(paths.output, id, 'cv.final.pdf');
+  const pdfPath = join(paths.output, id, `${resumeFileName(record, '最终版')}.pdf`);
   const args = ['generate-pdf.mjs', finalPath, pdfPath, '--format=a4'];
   if (record.reportNumber) args.push(`--report=${record.reportNumber}`);
   const result = spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8' });
@@ -625,7 +708,11 @@ async function main() {
       console.log(JSON.stringify(await renderPdf(arg), null, 2));
       return;
     }
-    console.log('Usage: node workflow.mjs <start|init|ingest|profile|profile-confirm|record|summary|prepare-editable|pdf> [argument]');
+    if (command === 'word') {
+      console.log(JSON.stringify(await renderWord(arg), null, 2));
+      return;
+    }
+    console.log('Usage: node workflow.mjs <start|init|ingest|profile|profile-confirm|record|summary|prepare-editable|pdf|word> [argument]');
   } catch (error) {
     console.error(`workflow: ${error.message}`);
     process.exitCode = 1;
@@ -646,9 +733,11 @@ export {
   promoteProfileDraft,
   readJson,
   renderPdf,
+  renderWord,
   renderSummary,
   renderSummaryHtml,
   resolveWorkspacePath,
+  resumeFileName,
   writeAdviceArtifact,
   safeId,
   saveRecord,

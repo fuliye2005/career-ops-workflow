@@ -13,6 +13,8 @@ import {
   inspectProfile,
   pathsFor,
   renderSummary,
+  renderWord,
+  resumeFileName,
   saveFinalHtml,
 } from '../workflow.mjs';
 
@@ -26,6 +28,8 @@ function check(label, condition, detail = '') {
 const root = await mkdtemp(join(tmpdir(), 'career-ops-workflow-'));
 try {
   const paths = await ensureWorkspace(root);
+  check('workspace creates candidate input directories', existsSync(paths.input) && existsSync(paths.personalInfoDir) && existsSync(paths.inbox) && existsSync(paths.photos));
+  check('workspace creates a local personal info file', existsSync(paths.personalInfoFile));
   writeFileSync(paths.jobsFile, [
     '# comments are ignored',
     'job-alpha | https://example.com/jobs/alpha',
@@ -93,13 +97,18 @@ try {
   check('final HTML cleaning removes editor toolbar', !cleaned.includes('workflow-toolbar'));
   check('final HTML cleaning removes workflow script and attributes', !cleaned.includes('workflow-editor') && !cleaned.includes('contenteditable'));
   check('final HTML cleaning preserves resume content', cleaned.includes('>CV<'));
+  check('resume filename uses the detected role', resumeFileName(record, '最终版') === '运维工程师-最终版');
 
   const first = await saveFinalHtml('job-alpha', editable, root);
   const second = await saveFinalHtml('job-alpha', editable.replace('CV', 'CV v2'), root);
-  check('first confirmed HTML uses cv.final.html', first.path.endsWith('/job-alpha/cv.final.html'));
-  check('second confirmed HTML is versioned instead of overwriting', second.path.endsWith('/job-alpha/cv.final.v2.html'));
-  check('versioned final HTML files both remain on disk', existsSync(join(root, 'output', 'workflow', 'job-alpha', 'cv.final.html')) && existsSync(join(root, 'output', 'workflow', 'job-alpha', 'cv.final.v2.html')));
-  check('saved final HTML contains no workflow editor residue', !readFileSync(join(root, 'output', 'workflow', 'job-alpha', 'cv.final.v2.html'), 'utf8').includes('workflow-'));
+  check('first confirmed HTML uses the role-based filename', first.path.endsWith('/job-alpha/运维工程师-最终版.html'));
+  check('second confirmed HTML is versioned instead of overwriting', second.path.endsWith('/job-alpha/运维工程师-最终版.v2.html'));
+  check('versioned final HTML files both remain on disk', existsSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.html')) && existsSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.v2.html')));
+  check('saved final HTML contains no workflow editor residue', !readFileSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.v2.html'), 'utf8').includes('workflow-'));
+  const word = await renderWord('job-alpha', root);
+  check('Word artifact is generated from the confirmed final HTML', word.path.endsWith('/job-alpha/运维工程师-最终版.docx') && existsSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.docx')));
+  const wordSummary = await renderSummary(root);
+  check('summary exposes the Word artifact link', readFileSync(wordSummary.path, 'utf8').includes('>Word</a>'));
 } catch (error) {
   fail(`workflow fixture crashed: ${error.message}`);
 } finally {

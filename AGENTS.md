@@ -10,7 +10,7 @@ Built and used by [santifer](https://santifer.io) to evaluate 740+ offers, gener
 
 Two layers — full list in `DATA_CONTRACT.md`:
 
-- **User Layer (NEVER auto-updated; personalization goes HERE):** `cv.md`, `config/profile.yml`, `modes/_profile.md`, `modes/_custom.md`, `article-digest.md`, `portals.yml`, `data/*`, `documents/*`, `reports/*`, `output/*`, `interview-prep/*`
+- **User Layer (NEVER auto-updated; personalization goes HERE):** `workflow-input/personal-info/personal-info.md`, `workflow-input/jd/`, `workflow-input/photos/`, `cv.md`, `config/profile.yml`, `modes/_profile.md`, `modes/_custom.md`, `article-digest.md`, `portals.yml`, `data/*`, `documents/*`, `reports/*`, `output/*`, `interview-prep/*`
 - **System Layer (auto-updatable; DON'T put user data here):** `modes/_shared.md` and all other modes, `AGENTS.md`, `CLAUDE.md`, `CODEX.md`, `OPENCODE.md`, `KIMI.md`, `GEMINI.md`, `*.mjs` scripts, `dashboard/*`, `templates/*`, `batch/*`
 
 **THE RULE: When the user asks to customize facts or targeting (archetypes, narrative, negotiation scripts, proof points, location policy, comp targets), ALWAYS write to `modes/_profile.md` or `config/profile.yml`. When they ask for procedural house rules, custom workflows, output preferences, or automations, write to `modes/_custom.md` (copy it from `modes/_custom.template.md` if missing). NEVER edit `modes/_shared.md` for user-specific content.** This ensures system updates don't overwrite their customizations.
@@ -19,7 +19,7 @@ Two layers — full list in `DATA_CONTRACT.md`:
 
 User-facing content (CV, cover letters, application emails, form answers, recruiter outreach) is generated **exclusively** from these files plus statements the user makes directly in the current conversation:
 
-- `cv.md` · `article-digest.md` · `config/profile.yml` · `modes/_profile.md` · `writing-samples/`
+- `workflow-input/personal-info/personal-info.md` · `cv.md` (legacy fallback) · `article-digest.md` · `config/profile.yml` · `modes/_profile.md` · `writing-samples/`
 - `modes/_custom.md` (procedural/style rules only — never introduces factual claims)
 - `voice-dna.md` (voice/style only — never introduces factual claims)
 - `interview-prep/story-bank.md` and `interview-prep/{company}-{role}.md` (the user's own STAR stories and prep notes — same trust level as `cv.md`; consumed by `interview` and `apply`/`match-star`)

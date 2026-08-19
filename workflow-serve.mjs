@@ -59,7 +59,13 @@ const server = createServer(async (request, response) => {
       sendJson(response, 405, { ok: false, error: 'Method not allowed' });
       return;
     }
-    const target = safeStaticPath(request.url === '/' ? '/output/workflow/index.html' : request.url);
+    const requestPath = new URL(request.url, 'http://127.0.0.1').pathname;
+    if ((request.method === 'GET' || request.method === 'HEAD') && requestPath === '/') {
+      response.writeHead(302, { location: '/output/workflow/index.html' });
+      response.end();
+      return;
+    }
+    const target = safeStaticPath(request.url);
     if (!target || !existsSync(target) || !(await stat(target)).isFile()) {
       response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
       response.end('Not found');

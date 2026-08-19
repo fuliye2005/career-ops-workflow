@@ -4,6 +4,8 @@ This document defines which files belong to the **system** (auto-updatable) and 
 
 ## User Layer (NEVER auto-updated)
 
+The public workflow input scaffold lives under `workflow-input/`. Keep the candidate's real personal information in `workflow-input/personal-info/personal-info.md`, put one job URL per line in `workflow-input/jd/jobs.txt`, place JD screenshots and other attachments beside that file, and keep optional resume photos in `workflow-input/photos/`. These inputs are local user data and must not be committed except for the checked-in placeholder files.
+
 These files contain your personal data, customizations, and work product. Updates will NEVER modify them.
 
 | File | Purpose |

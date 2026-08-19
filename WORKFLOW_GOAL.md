@@ -22,18 +22,19 @@
 
 ## User Workflow
 
-1. 用户把所有岗位资料放入 `jds/`。
-2. `jds/jobs.txt` 用于存放岗位 URL，每行一个岗位；workflow 根据 URL 自动生成内部岗位 ID，用户不需要填写实际岗位 ID。
-3. 同一目录可放入截图、PDF、DOCX、TXT、Markdown 等 JD 文件；只有一个 URL 时附件自动归到该岗位，多岗位附件继续兼容旧的 ID 前缀方式。
-4. Codex 运行 `career-ops workflow`，先检查个人资料，再批量读取、去重和评估岗位。
-5. 每个岗位输出评分、申请建议、匹配技能、技能缺口和具体简历修改建议。
-6. 仅为评分达到 `4.0/5` 的岗位生成定制 HTML 简历。
-7. 用户在浏览器中修改简历并保存人工确认版。
-8. PDF 不自动生成，只能由用户明确触发或在浏览器中手动打印。
+1. 用户把个人信息放入 `workflow-input/personal-info/personal-info.md`。
+2. 用户把岗位资料放入 `workflow-input/jd/`，并在 `workflow-input/jd/jobs.txt` 中每行填写一个岗位 URL；workflow 根据 URL 自动生成内部岗位 ID，用户不需要填写实际岗位 ID。
+3. `workflow-input/jd/` 可并列放入截图、PDF、DOCX、TXT、Markdown 等 JD 文件；只有一个 URL 时附件自动归到该岗位，多岗位附件继续兼容旧的 ID 前缀方式。
+4. 可选照片放入 `workflow-input/photos/`，仅用于本地 Word 简历生成，不提交到公开仓库。
+5. Codex 运行 `career-ops workflow`，先检查个人资料，再批量读取、去重和评估岗位。
+6. 每个岗位输出评分、申请建议、匹配技能、技能缺口和具体简历修改建议。
+7. 仅为评分达到 `4.0/5` 的岗位生成定制 HTML 简历。
+8. 用户在浏览器中修改简历并保存人工确认版。
+9. 用户确认 HTML 后可运行 `npm run workflow:word` 生成可编辑 Word；PDF 仍不自动生成，只能由用户明确触发或在浏览器中手动打印。
 
 ## Profile Requirements
 
-- `cv.md` 是候选人经历、技能和项目事实的主要来源。
+- `workflow-input/personal-info/personal-info.md` 是候选人经历、技能和项目事实的主要来源，`cv.md` 仅作为兼容旧流程的回退来源。
 - workflow 检查并补充 `config/profile.yml` 与 `modes/_profile.md`。
 - 新增或修改个人资料前必须先展示预览和差异，得到用户确认后才能写入。
 - 不得编造技能、经历、项目、指标或工作成果。
@@ -80,6 +81,7 @@ output/workflow/<job-id>/
 - `cv.editable.html`：浏览器编辑入口。
 - `cv.final.html`：用户人工修改并确认后的版本。
 - `cv.final.pdf`：可选产物，只在用户明确触发后生成。
+- `<岗位名称>-最终版.docx`：确认 HTML 后通过 workflow 生成的可编辑 Word 版本。
 - `metadata.json`：记录岗位 ID、评分、报告、模板、版本和文件状态。
 
 HTML 简历应保留固定版式，允许用户在浏览器中直接修改文字。重新运行 workflow 时必须保留已有人工确认版本，并创建新版本或等待用户决定。

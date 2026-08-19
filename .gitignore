@@ -167,3 +167,10 @@ documents/*
 # Intake fingerprints — the recorded source filenames may themselves carry
 # PII (e.g. cv/jane-doe-master-cv.pdf). #1723
 data/intake-state.json
+
+# Public workflow input scaffold: keep only the checked-in placeholders.
+workflow-input/personal-info/*
+!workflow-input/personal-info/personal-info.md
+workflow-input/jd/*
+!workflow-input/jd/jobs.txt
+workflow-input/photos/*

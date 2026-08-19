@@ -8,7 +8,7 @@ description: >-
 arguments: mode
 user_invocable: true
 user-invocable: true
-argument-hint: "[workflow | scan | discover | deep | pdf | workflow/pdf | latex | latex-tex | cover | email | add | expand | eu-swe | oferta | ofertas | apply | batch | tracker | agent-inbox | pipeline | contacto | training | project | interview-prep | interview | interview/plan | interview/practice | interview/debrief | interview-redflag | patterns | offer-prep | titles | upskill | followup | reply-watch | outcome | update]"
+argument-hint: "[workflow | scan | discover | deep | pdf | workflow/pdf | workflow/word | latex | latex-tex | cover | email | add | expand | eu-swe | oferta | ofertas | apply | batch | tracker | agent-inbox | pipeline | contacto | training | project | interview-prep | interview | interview/plan | interview/practice | interview/debrief | interview-redflag | patterns | offer-prep | titles | upskill | followup | reply-watch | outcome | update]"
 license: MIT
 ---
 
@@ -28,7 +28,7 @@ Codex prompt examples that map to the same router semantics:
 
 ```text
 Evaluate this JD with career-ops auto-pipeline: https://company.com/jobs/123
-Run the career-ops workflow for the jobs in jds/.
+Run the career-ops workflow for the jobs in workflow-input/.
 Run the career-ops scan mode and summarize new matches.
 Run the career-ops pipeline mode for data/pipeline.md.
 Run the career-ops pdf mode for the latest evaluated role.
@@ -45,6 +45,7 @@ Determine the mode from `$mode`:
 | JD text or URL (no sub-command) | **`auto-pipeline`** |
 | `workflow` | `workflow` |
 | `workflow/pdf` | `workflow/pdf` |
+| `workflow/word` | `workflow/word` |
 | `oferta` | `oferta` |
 | `ofertas` | `ofertas` |
 | `contacto` | `contacto` |
@@ -112,7 +113,8 @@ Concrete equivalents for Codex prompt-driven sessions:
 
 ```text
   /career-ops {JD}           ↔ "Evaluate this JD with career-ops auto-pipeline: {JD or URL}"
-  /career-ops workflow       ↔ "Run the career-ops workflow for jds/ and update the cumulative HTML summary."
+  /career-ops workflow       ↔ "Run the career-ops workflow for workflow-input/ and update the cumulative HTML summary."
+  /career-ops workflow/word  ↔ "Generate an editable Word file from a confirmed final HTML CV."
   /career-ops workflow/pdf   ↔ "Generate a PDF only for a confirmed final HTML CV."
 /career-ops scan           ↔ "Run the career-ops scan mode and summarize new matches."
 /career-ops pipeline       ↔ "Run the career-ops pipeline mode for data/pipeline.md."
@@ -142,6 +144,7 @@ Available commands:
   /career-ops interview/practice → Practice interview, one question at a time with feedback
   /career-ops interview/debrief → Post-interview debrief: close gaps, predict next round
   /career-ops pdf       → PDF only, ATS-optimized CV
+  /career-ops workflow/word → Editable Word generation for a confirmed workflow CV
   /career-ops workflow/pdf → Explicit PDF generation for a confirmed workflow CV
   /career-ops latex     → Export CV as LaTeX/Overleaf .tex
   /career-ops latex-tex → Tailor your own resume.tex in place (opt-in; cv.md stays default)
@@ -165,7 +168,7 @@ Available commands:
   /career-ops outcome   → Record application outcome & archive artifacts
   /career-ops update    → Update career-ops system files with diff preview + compat check
 
-Workflow inbox: add URLs to jds/jobs.txt and JD files to jds/ → /career-ops workflow
+Workflow inbox: add personal facts to workflow-input/personal-info/, URLs to workflow-input/jd/jobs.txt, JD files beside it, and optional photos to workflow-input/photos/ → /career-ops workflow
 Legacy inbox: add URLs to data/pipeline.md → /career-ops pipeline
 Or paste a JD directly to run the full pipeline.
 ```

@@ -18,7 +18,7 @@
 
 ## 中文 Workflow 教程
 
-本仓库包含一套面向 Codex 的批量求职 workflow。所有岗位资料统一放在 `jds/`，在 `jds/jobs.txt` 中每行填写一个 URL，岗位 ID 由系统自动生成。
+本仓库包含一套面向 Codex 的批量求职 workflow。推荐把个人信息、岗位链接、JD 附件和可选照片放在 `workflow-input/`，其中 `workflow-input/jd/jobs.txt` 每行填写一个 URL，岗位 ID 由系统自动生成。旧版 `jds/` 入口仍兼容。
 
 完整中文使用说明见：[使用教程.md](使用教程.md)
 
@@ -311,6 +311,7 @@ career-ops uses a shared command router. In CLIs that register slash commands, i
 /career-ops                → Show all available commands
 /career-ops {paste a JD}   → Full auto-pipeline (evaluate + PDF + tracker)
 /career-ops workflow        → Profile gate + batch JD intake + tailored HTML CVs + cumulative summary
+/career-ops workflow/word   → Generate an editable Word file from a confirmed workflow HTML CV
 /career-ops workflow/pdf    → Generate PDF only from a confirmed workflow HTML CV
 /career-ops scan           → Scan portals for new offers
 /career-ops pdf            → Generate ATS-optimized CV
@@ -344,7 +345,7 @@ You paste a job URL or description
          │
 ┌────────▼─────────┐
 │  A-G Evaluation  │  Match, gaps, comp research, STAR stories, legitimacy
-│  (reads cv.md)   │
+│  (reads workflow-input/personal-info/personal-info.md) │
 └────────┬─────────┘
          │
     ┌────┼────┐
@@ -398,7 +399,11 @@ career-ops/
 ├── CODEX.md                     # Codex wrapper (imports AGENTS.md)
 ├── OPENCODE.md                  # OpenCode wrapper (imports AGENTS.md)
 ├── GEMINI.md                    # Legacy no-op guard to avoid Antigravity duplicate context
-├── cv.md                        # Your CV (create this)
+├── workflow-input/              # Personal info, JD URLs/attachments, optional photos
+│   ├── personal-info/
+│   ├── jd/
+│   └── photos/
+├── cv.md                        # Legacy CV fallback (create this only if needed)
 ├── article-digest.md            # Your proof points (optional)
 ├── config/
 │   └── profile.example.yml      # Template for your profile
