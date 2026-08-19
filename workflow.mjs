@@ -194,7 +194,7 @@ async function ingest(root = ROOT) {
   const attachmentsById = new Map();
   const singleConfiguredId = configured.length === 1 ? configured[0].id : null;
   for (const entry of entries) {
-    if (!entry.isFile() || entry.name.toLowerCase() === 'jobs.txt') continue;
+    if (!entry.isFile() || ['jobs.txt', 'readme.md'].includes(entry.name.toLowerCase())) continue;
     if (!SUPPORTED_EXTENSIONS.has(extname(entry.name).toLowerCase())) continue;
     const id = singleConfiguredId || groupAttachment(entry.name, knownIds);
     if (!knownIds.has(id)) knownIds.add(id);

@@ -35,12 +35,14 @@ try {
   writeFileSync(join(paths.inbox, 'job-alpha.md'), '# Alpha JD\nPython Linux Docker');
   writeFileSync(join(paths.inbox, 'job-alpha-screenshot.png'), 'fake-image');
   writeFileSync(join(paths.inbox, 'unlisted.txt'), '# Unlisted JD');
+  writeFileSync(join(paths.inbox, 'README.md'), '# Input directory instructions');
 
   const index = await ingest(root);
   check('ingest deduplicates repeated job URLs', index.jobs.filter(job => job.url?.endsWith('/alpha')).length === 1);
   check('ingest preserves explicit job IDs', index.jobs.some(job => job.id === 'job-alpha'));
   check('ingest groups attachments by job ID', index.jobs.find(job => job.id === 'job-alpha')?.attachments?.length === 2);
   check('ingest keeps attachment-only jobs', index.jobs.some(job => job.id === 'unlisted'));
+  check('ingest ignores the input directory README', !index.jobs.some(job => job.id === 'README'));
 
   const reportPath = join(root, 'reports', '001-alpha.md');
   mkdirSync(join(root, 'reports'), { recursive: true });
