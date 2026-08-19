@@ -31,19 +31,20 @@ jobs:
             --exclude='.kimi/skills/career-ops/SKILL.md' \
             --exclude='.opencode/skills/career-ops/SKILL.md' \
             --exclude='.qwen/skills/career-ops/SKILL.md' \
-            "$GITHUB_WORKSPACE/career-ops-workflow.patch"
+            "$GITHUB_WORKSPACE/career-ops-workflow-v2.patch"
           cp "$GITHUB_WORKSPACE/career-ops-bootstrap.yml" "$RUNNER_TEMP/career-ops-bootstrap.yml"
 
           rsync -a --delete \
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude 'career-ops-workflow.patch' \
+            --exclude 'career-ops-workflow-v2.patch' \
             --exclude 'career-ops-bootstrap.yml' \
             "$base/" "$GITHUB_WORKSPACE/"
 
           mkdir -p "$GITHUB_WORKSPACE/.github/workflows"
           cp "$RUNNER_TEMP/career-ops-bootstrap.yml" "$GITHUB_WORKSPACE/.github/workflows/publish.yml"
-          rm -f "$GITHUB_WORKSPACE/career-ops-workflow.patch" "$GITHUB_WORKSPACE/career-ops-bootstrap.yml"
+          rm -f "$GITHUB_WORKSPACE/career-ops-workflow.patch" "$GITHUB_WORKSPACE/career-ops-workflow-v2.patch" "$GITHUB_WORKSPACE/career-ops-bootstrap.yml"
 
       - name: Commit the published tree
         shell: bash
@@ -56,4 +57,5 @@ jobs:
           git add -A
           git commit -m "feat: publish career-ops workflow" || exit 0
           git push
+
 
