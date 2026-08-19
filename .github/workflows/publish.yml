@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: write
-  workflows: write
 
 jobs:
   publish:
@@ -44,6 +43,8 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          rm -f "$GITHUB_WORKSPACE/.github/workflows/publish.yml"
           git add -A
           git commit -m "feat: publish career-ops workflow" || exit 0
           git push
