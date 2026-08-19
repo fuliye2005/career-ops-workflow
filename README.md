@@ -18,7 +18,7 @@
 
 ## 中文 Workflow 教程
 
-本仓库包含一套面向 Codex 的批量求职 workflow。岗位输入只需要在 `data/job-inbox/jobs.txt` 中每行填写一个 URL，岗位 ID 由系统自动生成。
+本仓库包含一套面向 Codex 的批量求职 workflow。所有岗位资料统一放在 `jds/`，在 `jds/jobs.txt` 中每行填写一个 URL，岗位 ID 由系统自动生成。
 
 完整中文使用说明见：[使用教程.md](使用教程.md)
 

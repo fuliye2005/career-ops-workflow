@@ -20,7 +20,7 @@ table in `AGENTS.md` (mirrored in `CLAUDE.md`).
 | `pipeline.md` | `pipeline` | Process the URL inbox (`data/pipeline.md`) |
 | `scan.md` | `scan` | Portal scanner (job discovery) |
 | `batch.md` | `batch` | Mass processing with headless workers |
-| `workflow.md` | `workflow` | Profile gate, job-inbox batch evaluation, HTML CV tailoring, browser confirmation, and cumulative summary |
+| `workflow.md` | `workflow` | Profile gate, `jds/` batch evaluation, HTML CV tailoring, browser confirmation, and cumulative summary |
 | `workflow/pdf.md` | `workflow/pdf` | Explicit PDF generation from a confirmed workflow HTML CV |
 | `apply.md` | `apply` | Live application assistant (form filling; never submits) |
 | `pdf.md` | `pdf` | ATS-optimized PDF generation |

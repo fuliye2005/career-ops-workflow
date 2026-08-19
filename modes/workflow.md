@@ -18,7 +18,7 @@ Run:
 node workflow.mjs workflow
 ```
 
-The input directory is `data/job-inbox/`. Its URL list is `data/job-inbox/jobs.txt`. The recommended input is one URL per line; the workflow creates a stable internal job ID automatically:
+The input directory is `jds/`. Its URL list is `jds/jobs.txt`. The recommended input is one URL per line; the workflow creates a stable internal job ID automatically:
 
 ```text
 https://example.com/jobs/123
@@ -80,7 +80,7 @@ The helper merges an existing record, fills the recommendation when a numeric sc
   "company": "Company",
   "role": "Role title",
   "url": "https://...",
-  "jdPath": "data/job-inbox/job-001.md",
+  "jdPath": "jds/job-001.md",
   "reportPath": "reports/001-company-2026-08-19.md",
   "advicePath": "output/workflow/job-001/resume-advice.md",
   "reportNumber": "001",

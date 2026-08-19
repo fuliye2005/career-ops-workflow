@@ -1,10 +1,10 @@
-# Career-Ops Workflow Inbox
+# Career-Ops Workflow 旧输入目录
 
-把待处理岗位放在这个目录：
+现在请把所有岗位资料放在仓库根目录的 `jds/` 文件夹中。`data/job-inbox/` 仅作为旧版本兼容目录；运行 workflow 时，旧目录中的岗位链接和附件会自动迁移到 `jds/`。
 
 ## URL
 
-在 `jobs.txt` 中每行只写一个岗位 URL，不需要填写岗位 ID。workflow 会根据 URL 自动生成稳定的内部 ID，用户不需要记住或维护这个 ID：
+新版请在 `jds/jobs.txt` 中每行只写一个岗位 URL，不需要填写岗位 ID。workflow 会根据 URL 自动生成稳定的内部 ID，用户不需要记住或维护这个 ID：
 
 ```text
 https://example.com/jobs/123
@@ -22,7 +22,7 @@ https://example.com/jobs/123
 - TXT
 - Markdown
 
-当 `jobs.txt` 只有一个 URL 时，目录中的附件会自动归到这个岗位，即使附件文件名没有岗位 ID。多个 URL 时，如需关联本地附件，可以继续使用旧的 ID 前缀方式，例如：
+当 `jds/jobs.txt` 只有一个 URL 时，`jds/` 中的附件会自动归到这个岗位，即使附件文件名没有岗位 ID。多个 URL 时，如需关联本地附件，可以继续使用旧的 ID 前缀方式，例如：
 
 ```text
 job-001-description.md

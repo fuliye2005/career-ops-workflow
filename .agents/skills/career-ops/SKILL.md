@@ -28,7 +28,7 @@ Codex prompt examples that map to the same router semantics:
 
 ```text
 Evaluate this JD with career-ops auto-pipeline: https://company.com/jobs/123
-Run the career-ops workflow for the jobs in data/job-inbox/.
+Run the career-ops workflow for the jobs in jds/.
 Run the career-ops scan mode and summarize new matches.
 Run the career-ops pipeline mode for data/pipeline.md.
 Run the career-ops pdf mode for the latest evaluated role.
@@ -112,7 +112,7 @@ Concrete equivalents for Codex prompt-driven sessions:
 
 ```text
   /career-ops {JD}           ↔ "Evaluate this JD with career-ops auto-pipeline: {JD or URL}"
-  /career-ops workflow       ↔ "Run the career-ops workflow for data/job-inbox/ and update the cumulative HTML summary."
+  /career-ops workflow       ↔ "Run the career-ops workflow for jds/ and update the cumulative HTML summary."
   /career-ops workflow/pdf   ↔ "Generate a PDF only for a confirmed final HTML CV."
 /career-ops scan           ↔ "Run the career-ops scan mode and summarize new matches."
 /career-ops pipeline       ↔ "Run the career-ops pipeline mode for data/pipeline.md."
@@ -165,7 +165,7 @@ Available commands:
   /career-ops outcome   → Record application outcome & archive artifacts
   /career-ops update    → Update career-ops system files with diff preview + compat check
 
-Workflow inbox: add URLs to data/job-inbox/jobs.txt and JD files to data/job-inbox/ → /career-ops workflow
+Workflow inbox: add URLs to jds/jobs.txt and JD files to jds/ → /career-ops workflow
 Legacy inbox: add URLs to data/pipeline.md → /career-ops pipeline
 Or paste a JD directly to run the full pipeline.
 ```

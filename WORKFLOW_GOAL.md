@@ -22,8 +22,8 @@
 
 ## User Workflow
 
-1. 用户把岗位资料放入 `data/job-inbox/`。
-2. `data/job-inbox/jobs.txt` 用于存放岗位 URL，每行一个岗位；workflow 根据 URL 自动生成内部岗位 ID，用户不需要填写实际岗位 ID。
+1. 用户把所有岗位资料放入 `jds/`。
+2. `jds/jobs.txt` 用于存放岗位 URL，每行一个岗位；workflow 根据 URL 自动生成内部岗位 ID，用户不需要填写实际岗位 ID。
 3. 同一目录可放入截图、PDF、DOCX、TXT、Markdown 等 JD 文件；只有一个 URL 时附件自动归到该岗位，多岗位附件继续兼容旧的 ID 前缀方式。
 4. Codex 运行 `career-ops workflow`，先检查个人资料，再批量读取、去重和评估岗位。
 5. 每个岗位输出评分、申请建议、匹配技能、技能缺口和具体简历修改建议。

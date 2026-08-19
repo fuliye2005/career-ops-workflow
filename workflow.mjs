@@ -14,10 +14,14 @@ const SUPPORTED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', 
 function pathsFor(root = ROOT) {
   const data = join(root, 'data', 'workflow');
   const output = join(root, 'output', 'workflow');
+  const inbox = join(root, 'jds');
+  const legacyInbox = join(root, 'data', 'job-inbox');
   return {
     root,
-    inbox: join(root, 'data', 'job-inbox'),
-    jobsFile: join(root, 'data', 'job-inbox', 'jobs.txt'),
+    inbox,
+    jobsFile: join(inbox, 'jobs.txt'),
+    legacyInbox,
+    legacyJobsFile: join(legacyInbox, 'jobs.txt'),
     data,
     jobsIndex: join(data, 'jobs.json'),
     records: join(data, 'records'),
@@ -162,7 +166,21 @@ async function ensureWorkspace(root = ROOT) {
     mkdir(paths.output, { recursive: true }),
   ]);
   if (!existsSync(paths.jobsFile)) {
-    await writeFile(paths.jobsFile, '# One job URL per line. The workflow creates the internal job ID automatically.\n# https://example.com/jobs/123\n', 'utf8');
+    if (existsSync(paths.legacyJobsFile)) {
+      await rename(paths.legacyJobsFile, paths.jobsFile);
+    } else {
+      await writeFile(paths.jobsFile, '# One job URL per line. The workflow creates the internal job ID automatically.\n# https://example.com/jobs/123\n', 'utf8');
+    }
+  }
+  if (existsSync(paths.legacyInbox)) {
+    const legacyEntries = await readdir(paths.legacyInbox, { withFileTypes: true });
+    for (const entry of legacyEntries) {
+      if (!entry.isFile() || entry.name.toLowerCase() === 'jobs.txt') continue;
+      if (!SUPPORTED_EXTENSIONS.has(extname(entry.name).toLowerCase())) continue;
+      const source = join(paths.legacyInbox, entry.name);
+      const target = join(paths.inbox, entry.name);
+      if (!existsSync(target)) await rename(source, target);
+    }
   }
   return paths;
 }
@@ -183,7 +201,7 @@ async function ingest(root = ROOT) {
     const bucket = attachmentsById.get(id) || [];
     bucket.push({
       name: entry.name,
-      path: join('data', 'job-inbox', entry.name).split(sep).join('/'),
+      path: join('jds', entry.name).split(sep).join('/'),
       type: attachmentType(entry.name),
     });
     attachmentsById.set(id, bucket);
@@ -442,7 +460,7 @@ function renderSummaryHtml(records, jobs, root = ROOT) {
 <header class="topbar"><div><div class="eyebrow">CAREER-OPS / WORKFLOW</div><h1 class="title">求职岗位总览</h1></div><div class="eyebrow">持续累计 · ${escapeHtml(new Date().toLocaleString('zh-CN'))}</div></header>
 <section class="summary"><div class="stat"><strong>${total}</strong><span>岗位总数</span></div><div class="stat"><strong>${evaluated}</strong><span>已评估</span></div><div class="stat"><strong>${ready}</strong><span>已有简历</span></div></section>
 <section class="controls"><input id="search" type="search" placeholder="搜索公司、岗位、技能或建议"><select id="status"><option value="">全部状态</option><option>优先申请</option><option>建议申请</option><option>谨慎考虑</option><option>不建议申请</option><option>待评估</option><option>已确认</option></select><select id="score"><option value="">全部评分</option><option value="4.5">4.5+</option><option value="4">4.0+</option><option value="3.5">3.5+</option></select></section>
-<section id="jobs" class="job-list">${rowHtml || '<div class="empty">还没有岗位。把 URL 写进 data/job-inbox/jobs.txt，或把 JD 文件放入 data/job-inbox/。</div>'}</section>
+<section id="jobs" class="job-list">${rowHtml || '<div class="empty">还没有岗位。把 URL 写进 jds/jobs.txt，或把 JD 文件放入 jds/。</div>'}</section>
 </main><script>
 const rows=[...document.querySelectorAll('.job-row')];
 function apply(){const q=document.querySelector('#search').value.trim().toLowerCase(),s=document.querySelector('#status').value,min=Number(document.querySelector('#score').value||0);for(const row of rows){const ok=(!q||row.dataset.search.includes(q))&&(!s||row.dataset.search.includes(s.toLowerCase()))&&(!min||Number(row.dataset.score)>=min);row.hidden=!ok}}
