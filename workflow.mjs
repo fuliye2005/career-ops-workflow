@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, extname, join, relative, resolve, sep } from 'node:path';
@@ -168,6 +168,28 @@ function parseJobsFile(text) {
   return jobs;
 }
 
+function hasRealJobsFile(filePath) {
+  if (!existsSync(filePath)) return false;
+  try {
+    return parseJobsFile(readFileSync(filePath, 'utf8')).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function selectJobInput(paths) {
+  if (hasRealJobsFile(paths.jobsFile)) {
+    return { jobsFile: paths.jobsFile, inbox: paths.inbox };
+  }
+  if (hasRealJobsFile(paths.legacyProjectJobsFile)) {
+    return { jobsFile: paths.legacyProjectJobsFile, inbox: paths.legacyProjectInbox };
+  }
+  if (hasRealJobsFile(paths.legacyJobsFile)) {
+    return { jobsFile: paths.legacyJobsFile, inbox: paths.legacyInbox };
+  }
+  return { jobsFile: paths.jobsFile, inbox: paths.inbox };
+}
+
 async function inspectProfile(root = ROOT) {
   const paths = pathsFor(root);
   const personalInfo = paths.personalInfoFile;
@@ -222,33 +244,17 @@ async function ensureWorkspace(root = ROOT) {
     else await writeFile(paths.personalInfoFile, '# 个人信息\n\n请填写求职者自己的 Markdown 个人信息。\n', 'utf8');
   }
   if (!existsSync(paths.jobsFile)) {
-    if (existsSync(paths.legacyProjectJobsFile)) {
-      await rename(paths.legacyProjectJobsFile, paths.jobsFile);
-    } else if (existsSync(paths.legacyJobsFile)) {
-      await rename(paths.legacyJobsFile, paths.jobsFile);
-    } else {
-      await writeFile(paths.jobsFile, '# One job URL per line. The workflow creates the internal job ID automatically.\n# https://example.com/jobs/123\n', 'utf8');
-    }
-  }
-  for (const sourceDir of [paths.legacyProjectInbox, paths.legacyInbox]) {
-    if (!existsSync(sourceDir) || resolve(sourceDir) === resolve(paths.inbox)) continue;
-    const entries = await readdir(sourceDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isFile() || ['jobs.txt', 'readme.md'].includes(entry.name.toLowerCase())) continue;
-      if (!SUPPORTED_EXTENSIONS.has(extname(entry.name).toLowerCase())) continue;
-      const source = join(sourceDir, entry.name);
-      const target = join(paths.inbox, entry.name);
-      if (!existsSync(target)) await rename(source, target);
-    }
+    await writeFile(paths.jobsFile, '# One job URL per line. The workflow creates the internal job ID automatically.\n# https://example.com/jobs/123\n', 'utf8');
   }
   return paths;
 }
 async function ingest(root = ROOT) {
   const paths = await ensureWorkspace(root);
-  const jobsText = await readFile(paths.jobsFile, 'utf8');
+  const input = selectJobInput(paths);
+  const jobsText = await readFile(input.jobsFile, 'utf8');
   const configured = parseJobsFile(jobsText);
   const knownIds = new Set(configured.map(job => job.id));
-  const entries = await readdir(paths.inbox, { withFileTypes: true });
+  const entries = await readdir(input.inbox, { withFileTypes: true });
   const attachmentsById = new Map();
   const singleConfiguredId = configured.length === 1 ? configured[0].id : null;
   for (const entry of entries) {
@@ -259,7 +265,7 @@ async function ingest(root = ROOT) {
     const bucket = attachmentsById.get(id) || [];
     bucket.push({
       name: entry.name,
-      path: relative(root, join(paths.inbox, entry.name)).split(sep).join('/'),
+      path: relative(root, join(input.inbox, entry.name)).split(sep).join('/'),
       type: attachmentType(entry.name),
     });
     attachmentsById.set(id, bucket);
