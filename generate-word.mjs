@@ -221,15 +221,19 @@ function renderHeader(page, photoPath) {
     paragraph([], { spacing: { after: 75, line: 40 }, border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: '16727A', space: 1 } } }),
     paragraph([run(contacts.join('  |  '), { size: 18, color: '555555' })], { spacing: { after: 80, line: 230 } }),
   ];
+  if (!photoPath) {
+    return left;
+  }
+
   const right = [];
   if (photoPath) {
     const extension = extname(photoPath).toLowerCase();
     const type = IMAGE_TYPES.get(extension);
     if (type) {
-      right.push(paragraph([new ImageRun({ data: requireBuffer(photoPath), type, transformation: { width: 105, height: 140 } })], { alignment: AlignmentType.RIGHT, spacing: { after: 0, line: 240 } }));
+      right.push(paragraph([new ImageRun({ data: requireBuffer(photoPath), type, transformation: { width: 76, height: 100 } })], { alignment: AlignmentType.RIGHT, spacing: { after: 0, line: 200 } }));
     }
   }
-  return twoColumnTable(left, right);
+  return [twoColumnTable(left, right, 9000, 1450)];
 }
 
 function requireBuffer(filePath) {
@@ -314,7 +318,7 @@ export async function generateDocxFromHtml({ htmlPath, outputPath, photoDir = nu
   const tree = parseHtml(source);
   const page = tree.findFirst('page') || tree.findFirst(null, 'body') || tree;
   const photoPath = findHtmlPhoto(tree, htmlPath) || await findFirstPhoto(photoDir);
-  const children = [renderHeader(page, photoPath)];
+  const children = renderHeader(page, photoPath);
 
   const summary = page.findFirst('summary-text');
   if (summary) children.push(sectionTitle('个人简介'), bodyParagraph(summary.text(), 18, 45));

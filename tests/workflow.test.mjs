@@ -15,6 +15,7 @@ import {
   renderSummary,
   renderWord,
   resumeFileName,
+  passesResumeGate,
   saveFinalHtml,
 } from '../workflow.mjs';
 
@@ -98,6 +99,7 @@ try {
   check('final HTML cleaning removes workflow script and attributes', !cleaned.includes('workflow-editor') && !cleaned.includes('contenteditable'));
   check('final HTML cleaning preserves resume content', cleaned.includes('>CV<'));
   check('resume filename uses the detected role', resumeFileName(record, '最终版') === '运维工程师-最终版');
+  check('resume gate accepts scores above three only', passesResumeGate(3.1) && !passesResumeGate(3) && !passesResumeGate(2.9));
 
   const first = await saveFinalHtml('job-alpha', editable, root);
   const second = await saveFinalHtml('job-alpha', editable.replace('CV', 'CV v2'), root);

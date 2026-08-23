@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
-const DEFAULT_SCORE_GATE = 4.0;
+const DEFAULT_SCORE_GATE = 3.0;
 const SUPPORTED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf', '.docx', '.txt', '.md', '.markdown']);
 
 function pathsFor(root = ROOT) {
@@ -312,7 +312,7 @@ async function resolveRecordId(value, root = ROOT, artifact = null) {
   if (requested) return /^https?:\/\//i.test(requested) ? hashId(requested) : safeId(requested);
   const records = await loadRecords(root);
   const ranked = records
-    .filter(record => Number(record.score) >= DEFAULT_SCORE_GATE)
+    .filter(record => passesResumeGate(record.score))
     .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
   const selected = (artifact ? ranked.find(record => record.artifacts?.[artifact]) : ranked[0])
     || ranked[0]
@@ -334,16 +334,21 @@ function hasResumeArtifacts(artifacts = {}) {
   return ['generatedHtml', 'editableHtml', 'finalHtml', 'pdf', 'word'].some(key => Boolean(artifacts[key]));
 }
 
+function passesResumeGate(score) {
+  const numeric = Number(score);
+  return Number.isFinite(numeric) && numeric > DEFAULT_SCORE_GATE;
+}
+
 function assertResumeGate(record) {
   const score = Number(record?.score);
-  if (!Number.isFinite(score) || score < DEFAULT_SCORE_GATE) {
-    throw new Error(`Resume generation requires a score of at least ${DEFAULT_SCORE_GATE.toFixed(1)}/5`);
+  if (!passesResumeGate(score)) {
+    throw new Error(`Resume generation requires a score greater than ${DEFAULT_SCORE_GATE.toFixed(1)}/5`);
   }
 }
 
 async function writeMetadata(record, root = ROOT) {
   const score = Number(record?.score);
-  if (!Number.isFinite(score) || score < DEFAULT_SCORE_GATE) return null;
+  if (!passesResumeGate(score)) return null;
   const paths = pathsFor(root);
   const id = safeId(record.id);
   const outputDir = join(paths.output, id);
@@ -408,8 +413,8 @@ async function saveRecord(record, root = ROOT) {
     artifacts: { ...(existing.artifacts || {}), ...(record.artifacts || {}) },
     updatedAt: record.updatedAt || new Date().toISOString(),
   };
-  if (Number.isFinite(Number(merged.score)) && Number(merged.score) < DEFAULT_SCORE_GATE && hasResumeArtifacts(merged.artifacts)) {
-    throw new Error(`Resume artifacts require a score of at least ${DEFAULT_SCORE_GATE.toFixed(1)}/5`);
+  if (hasResumeArtifacts(merged.artifacts) && !passesResumeGate(merged.score)) {
+    throw new Error(`Resume artifacts require a score greater than ${DEFAULT_SCORE_GATE.toFixed(1)}/5`);
   }
   if (!merged.recommendation && Number.isFinite(Number(merged.score))) {
     merged.recommendation = recommendationFor(merged.score);
@@ -483,7 +488,7 @@ function renderSummaryHtml(records, jobs, root = ROOT) {
   const rowHtml = rows.map(record => {
     const score = Number.isFinite(Number(record.score)) ? `${Number(record.score).toFixed(1)}/5` : '待评估';
     const recommendation = record.recommendation || recommendationFor(record.score);
-    const status = record.resumeStatus || (Number(record.score) >= DEFAULT_SCORE_GATE ? '待生成简历' : '未生成简历');
+    const status = record.resumeStatus || (passesResumeGate(record.score) ? '待生成简历' : '未生成简历');
     const skills = [...(record.skillsMatched || []), ...(record.skillGaps || []).map(skill => `缺口: ${skill}`)];
     const links = recordLinks(record, summaryFile, root).map(linkHtml).join(' ');
     const advice = record.resumeAdvice || {};
@@ -744,6 +749,7 @@ export {
   renderSummaryHtml,
   resolveWorkspacePath,
   resumeFileName,
+  passesResumeGate,
   writeAdviceArtifact,
   safeId,
   saveRecord,

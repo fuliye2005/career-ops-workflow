@@ -55,7 +55,7 @@ npm install
 npm run workflow
 ```
 
-确认岗位评分达到简历生成门槛后，启动本地页面编辑 HTML 简历：
+确认岗位评分严格大于 `3.0/5` 后，启动本地页面编辑 HTML 简历：
 
 ```powershell
 npm run workflow:serve

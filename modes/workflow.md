@@ -108,7 +108,7 @@ Use the user's configured output language for human-facing fields. Machine keys 
 
 ## Step 3 - HTML CV Gate
 
-Only when `score >= 4.0`:
+Only when `score > 3.0`:
 
 1. Build a structured CV payload from `workflow-input/personal-info/personal-info.md` (or legacy `cv.md`) and the evidence-backed tailoring advice. Never add a gap skill as if it were present.
 2. Write the payload to `output/workflow/{job-id}/cv.payload.json`.
@@ -122,9 +122,9 @@ node workflow.mjs prepare-editable
 
 4. Update the workflow record with `artifacts.generatedHtml`, `artifacts.editableHtml`, and `resumeStatus: "可编辑"`. Artifact filenames use the detected role title, such as `网络安全交付运维工程师-生成版.html` and `网络安全交付运维工程师-可编辑.html`; illegal filename characters are replaced with `-`.
 
-The executable layer rejects `prepare-editable`, final HTML saves, Word generation, and PDF generation for records below `4.0/5`. It also writes `output/workflow/{job-id}/metadata.json` for passing records. After confirming the final HTML, run `npm run workflow:word` to create an editable Word file using the first supported image in `workflow-input/photos/`, when present.
+The executable layer rejects `prepare-editable`, final HTML saves, Word generation, and PDF generation for records at or below `3.0/5`. It also writes `output/workflow/{job-id}/metadata.json` for passing records. After confirming the final HTML, run `npm run workflow:word` to create an editable Word file using the first supported image in `workflow-input/photos/`, when present. Application recommendations remain separate: scores below `4.0/5` should still be treated cautiously.
 
-For scores below 4.0, do not generate a CV. Keep the report and advice in the summary.
+For scores at or below 3.0, do not generate a CV. Keep the report and advice in the summary.
 
 ## Step 4 - Cumulative Summary
 
@@ -142,7 +142,7 @@ Tell the user:
 
 - where `output/workflow/index.html` is located;
 - which jobs were evaluated and their scores;
-- which jobs crossed the 4.0 CV gate;
+- which jobs crossed the `>3.0/5` CV gate;
 - which skill gaps remain;
 - that editable CVs require `npm run workflow:serve` and browser access;
 - that Word generation uses `npm run workflow:word` after HTML confirmation;
