@@ -264,7 +264,10 @@ function renderProjects(section) {
     const titleRuns = [run(title?.directText() || title?.text() || '', { size: 18, bold: true })];
     if (badge) titleRuns.push(run(`  ${badge.text()}`, { size: 16, color: '16727A' }));
     result.push(paragraph(titleRuns, { spacing: { after: 30, line: 230 } }));
-    result.push(bodyParagraph(project.findFirst('project-desc')?.text() || '', 17, 65));
+    const description = project.findFirst('project-desc');
+    if (description?.text()) result.push(bodyParagraph(description.text(), 17, 65));
+    const bullets = project.findFirst('project-bullets');
+    for (const item of bullets?.findAll(null, 'li') || []) result.push(listParagraph(item.text()));
   }
   return result;
 }

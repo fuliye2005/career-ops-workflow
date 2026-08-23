@@ -4,9 +4,10 @@ import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, normalize, resolve, sep } from 'node:path';
-import { ROOT, pathsFor, renderSummary, saveFinalHtml } from './workflow.mjs';
+import { ROOT, pathsFor, renderPdf, renderSummary, renderWord, saveFinalHtml } from './workflow.mjs';
 
 const PORT = Number(process.env.WORKFLOW_PORT || process.argv[2] || 4173);
+const MAX_REQUEST_BODY_BYTES = 20 * 1024 * 1024;
 const SERVE_ROOT = process.env.WORKFLOW_ROOT ? resolve(process.env.WORKFLOW_ROOT) : ROOT;
 const paths = pathsFor(SERVE_ROOT);
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.md': 'text/markdown; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.pdf': 'application/pdf', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
@@ -32,23 +33,43 @@ async function bodyJson(request) {
   let text = '';
   for await (const chunk of request) {
     text += chunk;
-    if (text.length > 5 * 1024 * 1024) throw new Error('Request body too large');
+    if (Buffer.byteLength(text, 'utf8') > MAX_REQUEST_BODY_BYTES) {
+      throw new Error(`Request body too large (max ${Math.round(MAX_REQUEST_BODY_BYTES / 1024 / 1024)} MB)`);
+    }
   }
   return JSON.parse(text || '{}');
 }
 
 function sendJson(response, status, value) {
   const text = JSON.stringify(value);
-  response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type' });
   response.end(text);
 }
 
 const server = createServer(async (request, response) => {
   try {
+    if (request.method === 'OPTIONS' && request.url === '/__workflow/save') {
+      response.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type' });
+      response.end();
+      return;
+    }
     if (request.method === 'POST' && request.url === '/__workflow/save') {
       const body = await bodyJson(request);
       const result = await saveFinalHtml(body.jobId, body.html, SERVE_ROOT);
-      sendJson(response, 200, { ok: true, ...result });
+      let word = null;
+      let pdf = null;
+      const warnings = [];
+      try {
+        word = await renderWord(body.jobId, SERVE_ROOT);
+      } catch (error) {
+        warnings.push(`Word 生成失败：${error.message}`);
+      }
+      try {
+        pdf = await renderPdf(body.jobId, SERVE_ROOT);
+      } catch (error) {
+        warnings.push(`PDF 生成失败：${error.message}`);
+      }
+      sendJson(response, 200, { ok: true, ...result, word: word?.path || null, pdf: pdf?.path || null, warning: warnings.length ? warnings.join('；') : null });
       return;
     }
     if (request.method === 'GET' && request.url === '/__workflow/health') {

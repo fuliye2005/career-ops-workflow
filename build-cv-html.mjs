@@ -384,34 +384,40 @@ function buildProjects(entries, partial) {
       const badge = e.badge
         ? `<span class="project-badge">${escapeHtml(e.badge)}</span>`
         : '';
-      // Prefer a single description; fall back to joining bullets into one line so
-      // a bullets-shaped payload still renders inside the .project-desc block.
-      const descText = e.description
-        || (Array.isArray(e.bullets) ? e.bullets.filter(Boolean).join(' ') : '');
-      const desc = descText
-        ? `\n    <div class="project-desc">${escapeHtml(descText)}</div>`
+      const bullets = Array.isArray(e.bullets)
+        ? e.bullets.filter(Boolean).map(item => `<li>${escapeHtml(item)}</li>`).join('\n')
+        : '';
+      const bulletList = bullets
+        ? `\n    <ul class="project-bullets">${bullets}</ul>`
+        : '';
+      const desc = !bullets && e.description
+        ? `\n    <div class="project-desc">${escapeHtml(e.description)}</div>`
         : '';
       const tech = e.tech
         ? `\n    <div class="project-tech">${escapeHtml(e.tech)}</div>`
         : '';
       return `<div class="project">
-    <div class="project-title">${escapeHtml(e.name)}${badge}</div>${desc}${tech}
+    <div class="project-title">${escapeHtml(e.name)}${badge}</div>${bulletList}${desc}${tech}
   </div>`;
     }).join('\n  ');
   }
 
   const { entryTemplate, blocks } = partial;
   return entries.filter(Boolean).map(e => {
-    const descText = e.description
-      || (Array.isArray(e.bullets) ? e.bullets.filter(Boolean).join(' ') : '');
+    const bullets = Array.isArray(e.bullets)
+      ? e.bullets.filter(Boolean).map(item => `<li>${escapeHtml(item)}</li>`).join('\n')
+      : '';
+    const descText = e.description || '';
     const blockValues = new Map([
       ['BADGE_BLOCK', { value: escapeHtml(e.badge || ''), present: Boolean(e.badge) }],
-      ['DESC_BLOCK',  { value: escapeHtml(descText),      present: Boolean(descText) }],
+      ['BULLETS_BLOCK', { value: bullets, present: Boolean(bullets) }],
+      ['DESC_BLOCK',  { value: escapeHtml(descText), present: Boolean(descText) && !bullets }],
       ['TECH_BLOCK',  { value: escapeHtml(e.tech || ''),  present: Boolean(e.tech) }],
     ]);
     return fillEntry(entryTemplate, blocks, {
       NAME:  escapeHtml(e.name || ''),
       BADGE: escapeHtml(e.badge || ''),
+      BULLETS: bullets,
       DESC:  escapeHtml(descText),
       TECH:  escapeHtml(e.tech || ''),
     }, blockValues);

@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { pass, fail } from './helpers.mjs';
 import {
   cleanEditableHtml,
+  editableInjection,
   ensureWorkspace,
   ingest,
   inspectProfile,
@@ -98,6 +99,10 @@ try {
   check('final HTML cleaning removes editor toolbar', !cleaned.includes('workflow-toolbar'));
   check('final HTML cleaning removes workflow script and attributes', !cleaned.includes('workflow-editor') && !cleaned.includes('contenteditable'));
   check('final HTML cleaning preserves resume content', cleaned.includes('>CV<'));
+  const injected = editableInjection('<html><body><main class="page">CV</main></body></html>', 'job-alpha');
+  check('editable HTML supports local-file save fallback', injected.includes("location.protocol==='file:'") && injected.includes('http://127.0.0.1:4173/__workflow/save'));
+  check('editable HTML reports save failures', injected.includes('button.disabled=true') && injected.includes('保存失败'));
+  check('editable HTML reports Word and PDF generation', injected.includes('保存并生成 Word/PDF') && injected.includes('Word/PDF 已生成'));
   check('resume filename uses the detected role', resumeFileName(record, '最终版') === '运维工程师-最终版');
   check('resume gate accepts scores above three only', passesResumeGate(3.1) && !passesResumeGate(3) && !passesResumeGate(2.9));
 
@@ -105,6 +110,9 @@ try {
   const second = await saveFinalHtml('job-alpha', editable.replace('CV', 'CV v2'), root);
   check('first confirmed HTML uses the role-based filename', first.path.endsWith('/job-alpha/运维工程师-最终版.html'));
   check('second confirmed HTML is versioned instead of overwriting', second.path.endsWith('/job-alpha/运维工程师-最终版.v2.html'));
+  const photoSizedHtml = '<!doctype html><html><body><div class="page">' + 'x'.repeat(5 * 1024 * 1024) + '</div></body></html>';
+  const photoSizedSave = await saveFinalHtml('job-alpha', photoSizedHtml, root);
+  check('confirmed HTML accepts photo-sized payloads', photoSizedSave.path.endsWith('/job-alpha/运维工程师-最终版.v3.html'));
   check('versioned final HTML files both remain on disk', existsSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.html')) && existsSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.v2.html')));
   check('saved final HTML contains no workflow editor residue', !readFileSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.v2.html'), 'utf8').includes('workflow-'));
   const word = await renderWord('job-alpha', root);

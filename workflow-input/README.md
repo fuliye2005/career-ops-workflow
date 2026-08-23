@@ -42,7 +42,7 @@ https://example.com/jobs/456
 
 ## 3. 添加照片
 
-如需生成带照片的 Word 简历，把一张 PNG、JPG、JPEG、GIF 或 BMP 照片放入 `photos/`。workflow 会按文件名排序，使用第一张支持的图片；没有照片也可以生成 Word。
+如需生成带照片的 Word/PDF 简历，把一张 PNG、JPG、JPEG、GIF 或 BMP 照片放入 `photos/`。workflow 会按文件名排序，使用第一张支持的图片；没有照片也可以生成 Word/PDF。
 
 照片只用于本地生成，不要将真实照片提交到公开仓库。
 
@@ -63,7 +63,7 @@ npm run workflow:serve
 
 打开 `http://127.0.0.1:4173/`，进入“可编辑”简历，修改后点击“保存最终版”。
 
-确认 HTML 最终版后，生成可编辑 Word：
+确认 HTML 最终版后，生成 Word：
 
 ```powershell
 npm run workflow:word
@@ -75,11 +75,19 @@ Word 文件会写入 `output/workflow/<job-id>/`，文件名使用识别到的�
 运维开发工程师-最终版.docx
 ```
 
-PDF 仍需显式执行：
+从 `npm run workflow:serve` 打开的可编辑页面点击“保存最终版”时，workflow 会自动保存最终版 HTML，并同时尝试生成 Word 和 PDF。PDF 文件名示例：
+
+```text
+运维开发工程师-最终版.pdf
+```
+
+如需单独重新生成 PDF，也可以显式执行：
 
 ```powershell
 npm run workflow:pdf
 ```
+
+带照片的 Word/PDF 会使用 `workflow-input/photos/` 中的照片；没有照片也可以生成。
 
 ## 5. 隐私提醒
 

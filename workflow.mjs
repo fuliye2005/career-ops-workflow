@@ -9,6 +9,7 @@ import { spawnSync } from 'node:child_process';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_SCORE_GATE = 3.0;
+const MAX_EDITABLE_HTML_BYTES = 16 * 1024 * 1024;
 const SUPPORTED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf', '.docx', '.txt', '.md', '.markdown']);
 
 function pathsFor(root = ROOT) {
@@ -548,8 +549,11 @@ async function renderSummary(root = ROOT) {
 }
 
 function editableInjection(html, jobId) {
-  const injection = `<style id="workflow-editor-style">.workflow-toolbar{position:sticky;top:0;z-index:9999;display:flex;gap:8px;align-items:center;padding:10px 14px;background:#202a33;color:#fff;font:14px Segoe UI,Arial,sans-serif;box-shadow:0 2px 8px #0002}.workflow-toolbar button{border:1px solid #9fb1bf;border-radius:4px;background:#fff;color:#202a33;padding:6px 10px;font:inherit;cursor:pointer}.workflow-toolbar span{font-size:12px;color:#d5e0e8}.workflow-edit-target{outline:2px dashed #2780c2;outline-offset:3px}</style><div id="workflow-toolbar" class="workflow-toolbar" contenteditable="false"><strong>Career-Ops 简历编辑</strong><button type="button" id="workflow-save">保存最终版</button><span id="workflow-message">修改文字后点击保存</span></div><script data-workflow-editor="true">(function(){const jobId=${JSON.stringify(jobId)};const target=document.querySelector('.page');if(!target)return;target.classList.add('workflow-edit-target');target.setAttribute('contenteditable','true');target.addEventListener('input',()=>{document.querySelector('#workflow-message').textContent='有未保存修改'});document.querySelector('#workflow-save').addEventListener('click',async()=>{const clone=document.documentElement.cloneNode(true);clone.querySelector('#workflow-toolbar')?.remove();clone.querySelector('#workflow-editor-style')?.remove();clone.querySelectorAll('script[data-workflow-editor]').forEach(el=>el.remove());clone.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));clone.querySelectorAll('.workflow-edit-target').forEach(el=>el.classList.remove('workflow-edit-target'));const res=await fetch('/__workflow/save',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jobId,html:'<!doctype html>\\n'+clone.outerHTML})});const data=await res.json();document.querySelector('#workflow-message').textContent=data.ok?'已保存最终版':'保存失败: '+(data.error||'unknown error')});})();</script>`;
-  return html.includes('</body>') ? html.replace('</body>', `${injection}</body>`) : `${html}${injection}`;
+const injection = `<style id="workflow-editor-style">.workflow-toolbar{position:sticky;top:0;z-index:9999;display:flex;gap:8px;align-items:center;padding:10px 14px;background:#202a33;color:#fff;font:14px Segoe UI,Arial,sans-serif;box-shadow:0 2px 8px #0002}.workflow-toolbar button{border:1px solid #9fb1bf;border-radius:4px;background:#fff;color:#202a33;padding:6px 10px;font:inherit;cursor:pointer}.workflow-toolbar button:disabled{opacity:.65;cursor:wait}.workflow-toolbar span{font-size:12px;color:#d5e0e8}.workflow-edit-target{outline:2px dashed #2780c2;outline-offset:3px}</style><div id="workflow-toolbar" class="workflow-toolbar" contenteditable="false"><strong>Career-Ops 简历编辑</strong><button type="button" id="workflow-save">保存最终版</button><span id="workflow-message">修改文字后点击保存</span></div><script data-workflow-editor="true">(function(){const jobId=${JSON.stringify(jobId)};const target=document.querySelector('.page');const button=document.querySelector('#workflow-save');const message=document.querySelector('#workflow-message');const saveUrl=location.protocol==='file:'?'http://127.0.0.1:4173/__workflow/save':'/__workflow/save';if(!target||!button||!message)return;target.classList.add('workflow-edit-target');target.setAttribute('contenteditable','true');target.addEventListener('input',()=>{message.textContent='有未保存修改'});button.addEventListener('click',async()=>{button.disabled=true;message.textContent='正在保存并生成 Word…';try{const clone=document.documentElement.cloneNode(true);clone.querySelector('#workflow-toolbar')?.remove();clone.querySelector('#workflow-editor-style')?.remove();clone.querySelectorAll('script[data-workflow-editor]').forEach(el=>el.remove());clone.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));clone.querySelectorAll('.workflow-edit-target').forEach(el=>el.classList.remove('workflow-edit-target'));const res=await fetch(saveUrl,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jobId,html:'<!doctype html>\\n'+clone.outerHTML})});let data={};try{data=await res.json()}catch{}if(!res.ok||!data.ok)throw new Error(data.error||'服务器返回错误');message.textContent=data.warning||!data.word?'已保存最终版，Word 生成失败':'已保存最终版，Word 已生成';}catch(error){message.textContent='保存失败：'+(error?.message||'请先运行 npm run workflow:serve');}finally{button.disabled=false;}});})();</script>`;
+  const adjustedInjection = injection
+    .replace('正在保存并生成 Word…', '正在保存并生成 Word/PDF…')
+    .replace('已保存最终版，Word 已生成', '已保存最终版，Word/PDF 已生成');
+  return html.includes('</body>') ? html.replace('</body>', `${adjustedInjection}</body>`) : `${html}${adjustedInjection}`;
 }
 
 async function prepareEditable(jobId, root = ROOT) {
@@ -577,7 +581,10 @@ async function prepareEditable(jobId, root = ROOT) {
 
 async function saveFinalHtml(jobId, html, root = ROOT) {
   if (typeof html !== 'string' || !html.includes('<html')) throw new Error('Invalid HTML payload');
-  if (html.length > 4 * 1024 * 1024) throw new Error('HTML payload is too large');
+  const htmlBytes = Buffer.byteLength(html, 'utf8');
+  if (htmlBytes > MAX_EDITABLE_HTML_BYTES) {
+    throw new Error(`HTML payload is too large (max ${Math.round(MAX_EDITABLE_HTML_BYTES / 1024 / 1024)} MB)`);
+  }
   const paths = pathsFor(root);
   const id = safeId(jobId);
   const recordFile = join(paths.records, `${id}.json`);
@@ -732,9 +739,11 @@ async function main() {
 
 export {
   DEFAULT_SCORE_GATE,
+  MAX_EDITABLE_HTML_BYTES,
   ROOT,
   assertResumeGate,
   cleanEditableHtml,
+  editableInjection,
   ensureWorkspace,
   inspectProfile,
   ingest,
