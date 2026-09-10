@@ -16,6 +16,6 @@ Run:
 node workflow.mjs pdf
 ```
 
-The PDF is written to `output/workflow/<job-id>/<岗位名称>-最终版.pdf`, using the detected role title with illegal filename characters replaced by `-`. The workflow record is updated, and `output/workflow/index.html` is refreshed.
+The PDF is written to `output/workflow/<job-id>/<岗位名称>.pdf`, using the detected role title with illegal filename characters replaced by `-` and without a `最终版` suffix. The workflow record is updated, and `output/workflow/index.html` is refreshed.
 
 If no final HTML exists for the selected role, stop and tell the user to run `npm run workflow:serve`, open the editable CV, and click `保存最终版` first. Never silently choose another CV version.

@@ -174,3 +174,10 @@ workflow-input/personal-info/*
 workflow-input/jd/*
 !workflow-input/jd/jobs.txt
 workflow-input/photos/*
+
+# Modular personal profile — keep only the checked-in instructions/examples.
+workflow-input/profile/*
+!workflow-input/profile/README.md
+!workflow-input/profile/profile.yml.example
+!workflow-input/profile/*/
+!workflow-input/profile/*/*.yml.example

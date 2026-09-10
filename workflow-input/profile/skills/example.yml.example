@@ -1,0 +1,14 @@
+id: skill-example
+type: skill
+title: 示例技能
+items:
+  - id: skill-example-use
+    title: 技能使用
+    content: 描述你真实使用过的技能和场景。
+    familiarity: 3
+    role_tags:
+      - 目标岗位
+    domain_tags:
+      - 技能关键词
+    evidence_level: confirmed
+    include_in_cv: true

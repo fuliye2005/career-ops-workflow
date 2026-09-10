@@ -1,0 +1,13 @@
+identity:
+  name: 你的姓名
+  email: 你的邮箱
+  phone: 你的电话
+  location: 你的城市
+
+summary: 用两到三句话概括你的求职方向和优势。
+
+preferences:
+  target_roles:
+    - 运维工程师
+  location: 中国境内
+  work_mode: 以岗位实际要求为准
