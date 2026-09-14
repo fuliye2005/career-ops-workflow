@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, normalize, resolve, sep } from 'node:path';
-import { ROOT, pathsFor, renderPdf, renderSummary, renderWord, saveFinalHtml } from './workflow.mjs';
+import { ROOT, deleteWorkflowJob, pathsFor, renderPdf, renderSummary, renderWord, saveFinalHtml, saveProfile, saveWorkflowSettings } from './workflow.mjs';
 
 const PORT = Number(process.env.WORKFLOW_PORT || process.argv[2] || 4173);
 const MAX_REQUEST_BODY_BYTES = 20 * 1024 * 1024;
@@ -48,7 +48,7 @@ function sendJson(response, status, value) {
 
 const server = createServer(async (request, response) => {
   try {
-    if (request.method === 'OPTIONS' && request.url === '/__workflow/save') {
+    if (request.method === 'OPTIONS' && ['/__workflow/save', '/__workflow/delete', '/__workflow/profile/save', '/__workflow/profile/export', '/__workflow/profile/import', '/__workflow/settings/save'].includes(request.url)) {
       response.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type' });
       response.end();
       return;
@@ -70,6 +70,41 @@ const server = createServer(async (request, response) => {
         warnings.push(`PDF 生成失败：${error.message}`);
       }
       sendJson(response, 200, { ok: true, ...result, word: word?.path || null, pdf: pdf?.path || null, warning: warnings.length ? warnings.join('；') : null });
+      return;
+    }
+    if (request.method === 'POST' && request.url === '/__workflow/delete') {
+      const body = await bodyJson(request);
+      const result = await deleteWorkflowJob(body.jobId, SERVE_ROOT);
+      sendJson(response, 200, { ok: true, ...result });
+      return;
+    }
+    if (request.method === 'POST' && request.url === '/__workflow/profile/save') {
+      const body = await bodyJson(request);
+      const result = await saveProfile(body, SERVE_ROOT);
+      sendJson(response, 200, { ok: true, ...result });
+      return;
+    }
+    if (request.method === 'POST' && request.url === '/__workflow/profile/export') {
+      const { exportProfile } = await import('./workflow.mjs');
+      const profile = await exportProfile(SERVE_ROOT);
+      sendJson(response, 200, { ok: true, profile });
+      return;
+    }
+    if (request.method === 'POST' && request.url === '/__workflow/profile/import') {
+      const { importProfile } = await import('./workflow.mjs');
+      const body = await bodyJson(request);
+      const result = await importProfile(body, SERVE_ROOT);
+      sendJson(response, 200, { ok: true, ...result });
+      return;
+    }
+    if (request.method === 'POST' && request.url === '/__workflow/settings/save') {
+      try {
+        const body = await bodyJson(request);
+        const settings = await saveWorkflowSettings(body, SERVE_ROOT);
+        sendJson(response, 200, { ok: true, settings });
+      } catch (error) {
+        sendJson(response, 400, { ok: false, error: error.message });
+      }
       return;
     }
     if (request.method === 'GET' && request.url === '/__workflow/health') {

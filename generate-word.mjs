@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { existsSync } from 'node:fs';
 import { dirname, extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { parseImageDataUrl } from './utils/profile-photo.mjs';
 import {
   AlignmentType,
   BorderStyle,
@@ -212,7 +213,7 @@ function findSection(page, title) {
   return page.findAll('section').find(section => section.findFirst('section-title')?.text() === title) || null;
 }
 
-function renderHeader(page, photoPath) {
+function renderHeader(page, photoSource) {
   const header = page.findFirst('header');
   const name = header?.findFirst(null, 'h1')?.text() || '个人简历';
   const contacts = header?.findFirst('contact-row')?.findAll(null, 'a').map(item => item.text()).filter(Boolean) || [];
@@ -221,23 +222,18 @@ function renderHeader(page, photoPath) {
     paragraph([], { spacing: { after: 75, line: 40 }, border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: '16727A', space: 1 } } }),
     paragraph([run(contacts.join('  |  '), { size: 18, color: '555555' })], { spacing: { after: 80, line: 230 } }),
   ];
-  if (!photoPath) {
+  if (!photoSource) {
     return left;
   }
 
-  const right = [];
-  if (photoPath) {
-    const extension = extname(photoPath).toLowerCase();
-    const type = IMAGE_TYPES.get(extension);
-    if (type) {
-      right.push(paragraph([new ImageRun({ data: requireBuffer(photoPath), type, transformation: { width: 76, height: 100 } })], { alignment: AlignmentType.RIGHT, spacing: { after: 0, line: 200 } }));
-    }
-  }
+  const right = [paragraph([new ImageRun({ data: photoSource.data, type: photoSource.type, transformation: { width: 76, height: 100 } })], { alignment: AlignmentType.RIGHT, spacing: { after: 0, line: 200 } })];
   return [twoColumnTable(left, right, 9000, 1450)];
 }
 
-function requireBuffer(filePath) {
-  return filePath instanceof Uint8Array ? filePath : readFileSync(filePath);
+function photoSourceFromPath(filePath) {
+  if (!filePath) return null;
+  const type = IMAGE_TYPES.get(extname(filePath).toLowerCase());
+  return type ? { data: readFileSync(filePath), type, path: filePath } : null;
 }
 
 function renderWork(section) {
@@ -302,10 +298,16 @@ function renderSkills(section) {
 function findHtmlPhoto(tree, htmlPath) {
   const image = tree.findFirst('cv-photo');
   const source = image?.attrs?.src;
-  if (!source || /^data:/i.test(source)) return null;
+  if (!source) return null;
+  if (/^data:/i.test(source)) {
+    const parsed = parseImageDataUrl(source);
+    if (!parsed) return null;
+    const type = parsed.mime === 'image/gif' ? 'gif' : parsed.mime === 'image/png' ? 'png' : parsed.mime === 'image/jpeg' ? 'jpg' : null;
+    return type ? { data: parsed.bytes, type } : null;
+  }
   const candidate = resolve(dirname(htmlPath), source);
   const type = IMAGE_TYPES.get(extname(candidate).toLowerCase());
-  return type && existsSync(candidate) ? candidate : null;
+  return type && existsSync(candidate) ? photoSourceFromPath(candidate) : null;
 }
 export async function findFirstPhoto(photoDir) {
   if (!photoDir || !existsSync(photoDir)) return null;
@@ -320,8 +322,8 @@ export async function generateDocxFromHtml({ htmlPath, outputPath, photoDir = nu
   const source = await readFile(htmlPath, 'utf8');
   const tree = parseHtml(source);
   const page = tree.findFirst('page') || tree.findFirst(null, 'body') || tree;
-  const photoPath = findHtmlPhoto(tree, htmlPath) || await findFirstPhoto(photoDir);
-  const children = renderHeader(page, photoPath);
+  const photoSource = findHtmlPhoto(tree, htmlPath) || photoSourceFromPath(await findFirstPhoto(photoDir));
+  const children = renderHeader(page, photoSource);
 
   const summary = page.findFirst('summary-text');
   if (summary) children.push(sectionTitle('个人简介'), bodyParagraph(summary.text(), 18, 45));
@@ -345,7 +347,7 @@ export async function generateDocxFromHtml({ htmlPath, outputPath, photoDir = nu
     description: 'Generated from the confirmed Career-Ops HTML resume.',
     sections: [{
       properties: {
-        page: { size: { width: 11906, height: 16838 }, margin: { top: 460, right: 660, bottom: 460, left: 660 } },
+        page: { size: { width: 11906, height: 16838 }, margin: { top: 660, right: 660, bottom: 660, left: 660 } },
       },
       children,
     }],
@@ -353,7 +355,7 @@ export async function generateDocxFromHtml({ htmlPath, outputPath, photoDir = nu
   const buffer = await Packer.toBuffer(document);
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, buffer);
-  return { outputPath, photoPath };
+  return { outputPath, photoPath: photoSource?.path || null };
 }
 
 function parseArgs(argv) {
