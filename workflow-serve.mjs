@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, normalize, resolve, sep } from 'node:path';
-import { ROOT, deleteWorkflowJob, pathsFor, renderPdf, renderSummary, renderWord, saveFinalHtml, saveProfile, saveWorkflowSettings } from './workflow.mjs';
+import { ROOT, deleteWorkflowJob, pathsFor, prepareEditable, renderPdf, renderSummary, renderWord, saveFinalHtml, saveProfile, saveWorkflowSettings } from './workflow.mjs';
 
 const PORT = Number(process.env.WORKFLOW_PORT || process.argv[2] || 4173);
 const MAX_REQUEST_BODY_BYTES = 20 * 1024 * 1024;
@@ -69,7 +69,12 @@ const server = createServer(async (request, response) => {
       } catch (error) {
         warnings.push(`PDF 生成失败：${error.message}`);
       }
-      sendJson(response, 200, { ok: true, ...result, word: word?.path || null, pdf: pdf?.path || null, warning: warnings.length ? warnings.join('；') : null });
+      try {
+        await prepareEditable(body.jobId, SERVE_ROOT);
+      } catch (error) {
+        warnings.push(`编辑页面恢复失败：${error.message}`);
+      }
+      sendJson(response, 200, { ok: true, ...result, word: word?.path || null, pdf: pdf?.path || null, wordExportPath: word?.exportPath || null, pdfExportPath: pdf?.exportPath || null, warning: warnings.length ? warnings.join('；') : null });
       return;
     }
     if (request.method === 'POST' && request.url === '/__workflow/delete') {

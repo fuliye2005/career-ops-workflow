@@ -914,10 +914,13 @@ async function prepareEditable(jobId, root = ROOT) {
   const generated = resolveResumeArtifact(record, 'generatedHtml', root, id, '生成版', 'html', 'cv.generated.html');
   if (!existsSync(generated)) throw new Error(`Generated HTML not found: ${generated}`);
   const editable = join(paths.output, id, `${resumeFileName(record)}.html`);
-  if (!existsSync(editable)) {
-    const source = await readFile(generated, 'utf8');
-    await writeAtomic(editable, editableInjection(source, id));
-  }
+  const finalPath = record.artifacts?.finalHtml
+    ? resolveResumeArtifact(record, 'finalHtml', root, id, '最终版', 'html', 'cv.final.html')
+    : null;
+  const sourcePath = finalPath && existsSync(finalPath) ? finalPath : generated;
+  const source = await readFile(sourcePath, 'utf8');
+  const editableSource = source.includes('data-workflow-editor="true"') ? source : editableInjection(cleanEditableHtml(source), id);
+  await writeAtomic(editable, editableSource);
   record.artifacts = { ...(record.artifacts || {}), generatedHtml: relative(root, generated).split(sep).join('/'), editableHtml: relative(root, editable).split(sep).join('/') };
   record.resumeStatus = record.artifacts.finalHtml ? '已确认' : '可编辑';
   record.updatedAt = new Date().toISOString();
@@ -982,6 +985,14 @@ function withA4PreviewLayout(html) {
     .replace(/<\/head>/i, `${layoutStyle}</head>`);
 }
 
+async function createRenderSource(finalPath) {
+  const source = await readFile(finalPath, 'utf8');
+  if (!source.includes('data-workflow-editor="true"')) return { path: finalPath, cleanup: async () => {} };
+  const renderPath = join(dirname(finalPath), `.render-${process.pid}-${Date.now()}.html`);
+  await writeAtomic(renderPath, withA4PreviewLayout(cleanEditableHtml(source)));
+  return { path: renderPath, cleanup: async () => { await rm(renderPath, { force: true }); } };
+}
+
 async function renderWord(jobId, root = ROOT) {
   const paths = pathsFor(root);
   const id = await resolveRecordId(jobId, root, 'finalHtml');
@@ -992,12 +1003,18 @@ async function renderWord(jobId, root = ROOT) {
   const finalPath = resolveResumeArtifact(record, 'finalHtml', root, id, '最终版', 'html', 'cv.final.html');
   if (!existsSync(finalPath)) throw new Error(`Final HTML is not confirmed: ${finalPath}`);
   const wordPath = join(paths.output, id, `${resumeFileName(record)}.docx`);
-  const result = spawnSync(process.execPath, [
-    join(ROOT, 'generate-word.mjs'),
-    '--html', finalPath,
-    '--output', wordPath,
-    '--photo-dir', paths.photos,
-  ], { cwd: root, encoding: 'utf8' });
+  const renderSource = await createRenderSource(finalPath);
+  let result;
+  try {
+    result = spawnSync(process.execPath, [
+      join(ROOT, 'generate-word.mjs'),
+      '--html', renderSource.path,
+      '--output', wordPath,
+      '--photo-dir', paths.photos,
+    ], { cwd: root, encoding: 'utf8' });
+  } finally {
+    await renderSource.cleanup();
+  }
   if (result.status !== 0) throw new Error(result.stderr || result.stdout || `Word generation failed with ${result.status}`);
   record.artifacts = { ...(record.artifacts || {}), word: relative(root, wordPath).split(sep).join('/') };
   const settings = await loadWorkflowSettings(root);
@@ -1023,18 +1040,24 @@ async function renderPdf(jobId, root = ROOT) {
   assertResumeGate(record);
   const finalPath = resolveResumeArtifact(record, 'finalHtml', root, id, '最终版', 'html', 'cv.final.html');
   if (!existsSync(finalPath)) throw new Error(`Final HTML is not confirmed: ${finalPath}`);
-  const factCheck = spawnSync(process.execPath, [
-    'verify-cv-facts.mjs',
-    finalPath,
-    '--source', 'cv.md',
-    '--source', 'article-digest.md',
-    '--source', 'workflow-input/personal-info/personal-info.md',
-  ], { cwd: root, encoding: 'utf8' });
-  if (factCheck.status !== 0) throw new Error(factCheck.stderr || factCheck.stdout || 'CV fact check failed');
   const pdfPath = join(paths.output, id, `${resumeFileName(record)}.pdf`);
-  const args = ['generate-pdf.mjs', finalPath, pdfPath, '--format=a4', '--max-pages=1', '--strict-pages'];
-  if (record.reportNumber) args.push(`--report=${record.reportNumber}`);
-  const result = spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8' });
+  const renderSource = await createRenderSource(finalPath);
+  let result;
+  try {
+    const factCheck = spawnSync(process.execPath, [
+      'verify-cv-facts.mjs',
+      renderSource.path,
+      '--source', 'cv.md',
+      '--source', 'article-digest.md',
+      '--source', 'workflow-input/personal-info/personal-info.md',
+    ], { cwd: root, encoding: 'utf8' });
+    if (factCheck.status !== 0) throw new Error(factCheck.stderr || factCheck.stdout || 'CV fact check failed');
+    const args = ['generate-pdf.mjs', renderSource.path, pdfPath, '--format=a4', '--max-pages=1', '--strict-pages'];
+    if (record.reportNumber) args.push(`--report=${record.reportNumber}`);
+    result = spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8' });
+  } finally {
+    await renderSource.cleanup();
+  }
   if (result.status !== 0) throw new Error(result.stderr || result.stdout || `PDF generation failed with ${result.status}`);
   record.artifacts = { ...(record.artifacts || {}), pdf: relative(root, pdfPath).split(sep).join('/') };
   const settings = await loadWorkflowSettings(root);
