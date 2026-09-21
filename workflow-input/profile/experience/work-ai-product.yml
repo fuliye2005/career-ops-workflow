@@ -1,0 +1,30 @@
+id: work-ai-product
+type: experience
+title: AI 产品运营
+organization: 上海知行智能科技有限公司
+period: 2023.07—至今
+items:
+  - id: work-ai-product-feedback
+    title: 用户需求与版本反馈
+    content: 负责企业 AI 助手和知识库产品的用户需求收集、问题分类与版本反馈，将客户反馈整理为需求卡片并协助维护季度迭代清单。
+    familiarity: 4
+    role_tags: [AI 产品运营, 产品运营]
+    domain_tags: [AI 产品, 需求分析, 用户反馈]
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: work-ai-product-onboarding
+    title: 新用户上手与运营支持
+    content: 设计新用户上手流程和使用指引，参与线上培训、问题答疑和上线问题跟进。
+    familiarity: 4
+    role_tags: [AI 产品运营, 用户运营, 客户成功]
+    domain_tags: [用户教育, 培训, 上线跟进]
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: work-ai-product-ai-tools
+    title: AI 工具辅助运营工作
+    content: 使用 AI 工具辅助整理会议记录、FAQ 和运营周报，与产品、客户成功和技术支持团队协作推进处理结果。
+    familiarity: 5
+    role_tags: [AI 产品运营, 自动化运营]
+    domain_tags: [AI 工具, Workflow, 协作]
+    evidence_level: confirmed
+    include_in_cv: true

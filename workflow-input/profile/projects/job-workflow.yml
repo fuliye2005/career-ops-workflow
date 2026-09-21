@@ -1,0 +1,22 @@
+id: project-job-workflow
+type: project
+title: AI 求职 Workflow 展示项目
+organization: 个人项目
+period: 2025.03—至今
+items:
+  - id: project-job-workflow-profile
+    title: 岗位匹配与个人资料建模
+    content: 设计岗位 JD、个人资料、技能熟悉度和简历输出之间的工作流，将个人经历拆分为可复用的技能、经历和项目条目。
+    familiarity: 5
+    role_tags: [AI 产品运营, 自动化运营, 产品运营]
+    domain_tags: [Workflow, AI 工具, 岗位匹配]
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: project-job-workflow-facts
+    title: 事实边界与输出验证
+    content: 参与岗位匹配、技能差距和简历建议页面验证，重点检查系统只使用个人资料中已有信息，不凭空补充经历。
+    familiarity: 5
+    role_tags: [AI 产品运营, 自动化运营]
+    domain_tags: [事实校验, 简历, 产品验证]
+    evidence_level: confirmed
+    include_in_cv: true

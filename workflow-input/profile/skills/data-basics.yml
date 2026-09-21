@@ -1,0 +1,20 @@
+id: skill-data-basics
+type: skill
+title: 数据基础
+items:
+  - id: skill-data-basics-spreadsheet
+    title: Excel 与飞书表格
+    content: 使用表格完成用户反馈、活动报名、运营周报和基础数据汇总。
+    familiarity: 4
+    role_tags: [运营, 产品运营, 用户运营]
+    domain_tags: [Excel, 飞书表格, 数据整理]
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: skill-data-basics-sql
+    title: SQL 基础
+    content: 能完成简单的数据查询、字段核对和运营分析辅助，不将其表述为高级数据分析能力。
+    familiarity: 3
+    role_tags: [AI 产品运营, 产品运营]
+    domain_tags: [SQL, 数据分析]
+    evidence_level: confirmed
+    include_in_cv: true

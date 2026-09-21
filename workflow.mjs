@@ -282,6 +282,65 @@ function relativeHref(fromFile, targetPath, root = ROOT) {
   return targetRelative || './';
 }
 
+function renderMarkdownInline(value) {
+  let html = escapeHtml(value);
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  return html;
+}
+
+function renderMarkdownDocument(markdown, title) {
+  const blocks = [];
+  let list = [];
+  const flushList = () => {
+    if (!list.length) return;
+    blocks.push(`<ul>${list.map(item => `<li>${renderMarkdownInline(item)}</li>`).join('')}</ul>`);
+    list = [];
+  };
+  for (const rawLine of String(markdown || '').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) { flushList(); continue; }
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) { flushList(); blocks.push(`<h${heading[1].length}>${renderMarkdownInline(heading[2])}</h${heading[1].length}>`); continue; }
+    const bullet = line.match(/^[-*]\s+(.+)$/);
+    if (bullet) { list.push(bullet[1]); continue; }
+    const ordered = line.match(/^\d+\.\s+(.+)$/);
+    if (ordered) { flushList(); blocks.push(`<p class="ordered-item">${renderMarkdownInline(line)}</p>`); continue; }
+    flushList();
+    blocks.push(`<p>${renderMarkdownInline(line)}</p>`);
+  }
+  flushList();
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)}</title><style>body{margin:0;background:#f5f7f9;color:#20252b;font:15px/1.75 "Segoe UI","Microsoft YaHei",Arial,sans-serif}.document{max-width:900px;margin:28px auto;padding:28px 34px 48px;background:#fff;border:1px solid #dfe5ea;border-radius:6px;box-shadow:0 1px 3px #0000000d}h1{font-size:28px;margin:0 0 24px;border-bottom:1px solid #d9e0e6;padding-bottom:14px}h2{font-size:21px;margin:26px 0 8px;border-left:4px solid #2780c2;padding-left:10px}h3{font-size:17px;margin:20px 0 6px}p{margin:8px 0}ul{margin:8px 0 14px;padding-left:24px}li{margin:4px 0}code{background:#f1f4f6;border-radius:3px;padding:1px 4px}a{color:#155d91}.ordered-item{margin-left:8px}</style></head><body><main class="document"><h1>${escapeHtml(title)}</h1>${blocks.join('')}</main></body></html>`;
+}
+
+async function ensureMarkdownHtmlArtifacts(records, root = ROOT) {
+  const paths = pathsFor(root);
+  for (const record of records) {
+    const conversions = [
+      ['reportPath', 'reportHtml', '评估报告', '评估报告.html'],
+      ['advicePath', 'adviceHtml', '修改建议', '修改建议.html'],
+      ['upskillPath', 'upskillHtml', '技能提升建议', '技能提升建议.html'],
+      ['interviewPrepPath', 'interviewPrepHtml', '面试准备', '面试准备.html'],
+    ];
+    let changed = false;
+    for (const [sourceKey, artifactKey, title, fileName] of conversions) {
+      const source = record[sourceKey];
+      if (!source || !/\.md(?:own)?$/i.test(source)) continue;
+      const sourcePath = resolveWorkspacePath(root, source);
+      if (!existsSync(sourcePath)) continue;
+      const outputPath = join(paths.output, record.id, fileName);
+      await writeAtomic(outputPath, renderMarkdownDocument(await readFile(sourcePath, 'utf8'), `${record.company || ''} / ${record.role || record.id} / ${title}`));
+      record.artifacts = { ...(record.artifacts || {}), [artifactKey]: relative(root, outputPath).split(sep).join('/') };
+      changed = true;
+    }
+    if (changed) {
+      record.updatedAt = new Date().toISOString();
+      await writeAtomic(join(paths.records, `${record.id}.json`), JSON.stringify(record, null, 2) + '\n');
+    }
+  }
+}
+
 function attachmentType(fileName) {
   const extension = extname(fileName).toLowerCase();
   if (['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(extension)) return 'image';
@@ -702,8 +761,10 @@ function recordLinks(record, summaryFile, root) {
     const href = relativeHref(summaryFile, target, root);
     links.push({ label, href, kind, disabled: !href });
   };
-  add('评估报告', record.reportPath);
-  add('修改建议', record.advicePath || record.reportPath);
+  add('评估报告', record.artifacts?.reportHtml || record.reportHtmlPath || null);
+  add('修改建议', record.artifacts?.adviceHtml || record.adviceHtmlPath || null);
+  add('技能提升建议', record.artifacts?.upskillHtml || record.upskillHtmlPath || null);
+  add('面试准备', record.artifacts?.interviewPrepHtml || record.interviewPrepHtmlPath || null);
   add('编辑 HTML', record.artifacts?.editableHtml);
   add('PDF', record.artifacts?.pdf);
   add('Word', record.artifacts?.word);
@@ -916,6 +977,7 @@ async function renderSummary(root = ROOT) {
   const paths = await ensureWorkspace(root);
   const jobsIndex = await readJson(paths.jobsIndex, { jobs: [] });
   const records = await loadRecords(root);
+  await ensureMarkdownHtmlArtifacts(records, root);
   const html = renderSummaryHtml(records, jobsIndex.jobs || [], root);
   await writeAtomic(paths.summary, html);
   await renderProfilePage(root);

@@ -1,0 +1,45 @@
+# Career-Ops demo profile
+candidate:
+  full_name: "林悦"
+  email: "demo@example.com"
+  phone: ""
+  location: "上海"
+
+target_roles:
+  primary:
+    - "AI 产品运营"
+    - "自动化运营"
+    - "产品运营"
+    - "用户运营"
+    - "客户成功"
+
+language:
+  output: "zh-CN"
+
+cv:
+  output_format: "html"
+  template: "zh-minimal"
+
+preferences:
+  location:
+    country_scope: "中国境内"
+    preferred: "上海或远程"
+  work_mode: "以主动放入 workflow-input/jd/ 的岗位 JD 为准"
+  compensation: "以岗位实际要求为准"
+  work_authorization: "中国境内就业"
+  english: "未设置为核心卖点"
+
+skills:
+  core:
+    - "AI 工具与 Workflow"
+    - "用户需求分析"
+    - "内容策划与知识库"
+    - "项目推进与跨团队协作"
+    - "Excel / 飞书表格"
+    - "SQL 基础"
+    - "用户运营"
+
+capability_boundaries:
+  - "不是独立软件开发工程师，不将 Python 写成熟练开发能力。"
+  - "SQL 和数据分析为基础能力，适合数据核对、简单分析和运营复盘。"
+  - "项目指标仅在资料明确提供时使用，不自动编造增长数据。"

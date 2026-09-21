@@ -226,7 +226,7 @@ function renderHeader(page, photoSource) {
     return left;
   }
 
-  const right = [paragraph([new ImageRun({ data: photoSource.data, type: photoSource.type, transformation: { width: 76, height: 100 } })], { alignment: AlignmentType.RIGHT, spacing: { after: 0, line: 200 } })];
+  const right = [paragraph([new ImageRun({ data: photoSource.data, type: photoSource.type, transformation: { width: 104, height: 138 } })], { alignment: AlignmentType.RIGHT, spacing: { after: 0, line: 200 } })];
   return [twoColumnTable(left, right, 9000, 1450)];
 }
 

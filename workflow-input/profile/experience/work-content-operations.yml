@@ -1,0 +1,22 @@
+id: work-content-operations
+type: experience
+title: 内容与用户运营
+organization: 上海知行智能科技有限公司
+period: 2021.07—2023.06
+items:
+  - id: work-content-docs
+    title: 产品内容与帮助文档
+    content: 负责产品帮助文档、案例文章和用户教育内容的策划与维护，根据用户反馈更新内容结构。
+    familiarity: 4
+    role_tags: [产品运营, 用户运营, 客户成功]
+    domain_tags: [内容策划, 帮助文档, 知识库]
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: work-content-community
+    title: 社群与活动运营
+    content: 参与线上活动和用户社群运营，整理活动数据并输出复盘材料，协调设计、产品和销售团队完成物料准备。
+    familiarity: 4
+    role_tags: [用户运营, 内容运营]
+    domain_tags: [社群, 活动运营, 复盘]
+    evidence_level: confirmed
+    include_in_cv: true

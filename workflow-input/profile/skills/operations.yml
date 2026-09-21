@@ -1,0 +1,28 @@
+id: skill-operations
+type: skill
+title: 运营与项目协作
+items:
+  - id: skill-operations-needs
+    title: 用户需求与反馈分析
+    content: 收集用户反馈、客服工单和产品问题，进行主题分类、优先级整理并形成需求卡片。
+    familiarity: 4
+    role_tags: [AI 产品运营, 产品运营, 用户运营]
+    domain_tags: [用户研究, 需求分析, 反馈分析]
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: skill-operations-content
+    title: 内容与知识库运营
+    content: 维护帮助文档、案例文章、FAQ 和用户教育内容，参与内容排期与发布复盘。
+    familiarity: 4
+    role_tags: [产品运营, 用户运营, 客户成功]
+    domain_tags: [内容运营, 知识库, FAQ]
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: skill-operations-project
+    title: 项目推进与跨团队协作
+    content: 协调产品、技术支持、客户成功和设计团队，跟进上线问题和运营活动交付。
+    familiarity: 4
+    role_tags: [AI 产品运营, 自动化运营, 项目运营]
+    domain_tags: [项目管理, 协作, 上线跟进]
+    evidence_level: confirmed
+    include_in_cv: true

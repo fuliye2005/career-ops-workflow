@@ -1,0 +1,22 @@
+id: internship-operations
+type: experience
+title: 运营实习生
+organization: 上海云栖数字服务有限公司
+period: 2020.07—2021.03
+items:
+  - id: internship-operations-feedback
+    title: 用户反馈与工单整理
+    content: 协助整理用户反馈、客服工单和产品问题清单，完成主题分类和基础跟进。
+    familiarity: 3
+    role_tags: [用户运营, 产品运营]
+    domain_tags: [反馈整理, 工单, 用户支持]
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: internship-operations-content
+    title: 内容排期与活动支持
+    content: 参与公众号和社群内容排期，制作活动报名表、用户调研问卷和活动复盘文档。
+    familiarity: 3
+    role_tags: [内容运营, 用户运营]
+    domain_tags: [内容排期, 调研, 活动]
+    evidence_level: confirmed
+    include_in_cv: true

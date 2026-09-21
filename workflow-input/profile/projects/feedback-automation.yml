@@ -1,0 +1,14 @@
+id: project-feedback-automation
+type: project
+title: 客户反馈自动分类流程
+organization: 个人项目
+period: 2024.04—2024.09
+items:
+  - id: project-feedback-automation-classify
+    title: 反馈分类与跟进表
+    content: 使用表格和 AI 工具对客户反馈进行主题分类和优先级整理，设计“反馈—问题—负责人—处理状态”的跟进表结构。
+    familiarity: 4
+    role_tags: [AI 产品运营, 自动化运营, 用户运营]
+    domain_tags: [反馈分析, AI 工具, 流程设计]
+    evidence_level: confirmed
+    include_in_cv: true

@@ -1,0 +1,20 @@
+id: career-goals
+type: preference
+title: 求职方向与偏好
+items:
+  - id: career-goals-targets
+    title: 目标岗位
+    content: AI 产品运营、自动化运营、产品运营、用户运营、客户成功。
+    familiarity: 4
+    role_tags: [AI 产品运营, 自动化运营]
+    domain_tags: [求职目标]
+    evidence_level: confirmed
+    include_in_cv: false
+  - id: career-goals-location
+    title: 工作地点
+    content: 上海或远程优先。
+    familiarity: 5
+    role_tags: [全部]
+    domain_tags: [求职偏好]
+    evidence_level: confirmed
+    include_in_cv: false

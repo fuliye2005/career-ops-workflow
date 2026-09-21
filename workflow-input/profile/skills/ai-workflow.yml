@@ -1,0 +1,12 @@
+id: skill-ai-workflow
+type: skill
+title: AI 工具与 Workflow
+items:
+  - id: skill-ai-workflow-use
+    title: AI 工具与 Workflow 实际使用
+    content: 使用 AI 工具辅助资料整理、会议记录、FAQ、运营周报和岗位匹配流程验证。
+    familiarity: 5
+    role_tags: [AI 产品运营, 自动化运营, 产品运营]
+    domain_tags: [AI 工具, Workflow, 自动化]
+    evidence_level: confirmed
+    include_in_cv: true
