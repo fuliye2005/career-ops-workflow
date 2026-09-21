@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { pass, fail } from './helpers.mjs';
 import {
   cleanEditableHtml,
+  deleteWorkflowJob,
   editableInjection,
   ensureWorkspace,
   ingest,
@@ -82,6 +83,10 @@ try {
   check('summary accumulates evaluated records', summary.count === 3 && summaryHtml.includes('Alpha'));
   check('summary exposes existing report links', summaryHtml.includes('reports/001-alpha.md'));
   check('summary shows concrete resume advice', summaryHtml.includes('incident response') && summaryHtml.includes('查看具体修改建议'));
+  check('summary exposes PDF status filter', summaryHtml.includes('id="pdf"') && summaryHtml.includes('PDF 未确定'));
+  check('summary defaults to newest-first time sorting', summaryHtml.includes('id="sort"><option value="time-desc">最近更新（默认）</option>') && summaryHtml.includes('data-time="'));
+  check('summary marks jobs without PDFs as pending', summaryHtml.includes('data-pdf="pending"'));
+  check('summary exposes a delete action', summaryHtml.includes('class="link danger delete-job"'));
   check('summary disables missing local artifacts', summaryHtml.includes('class="link disabled">自动简历</span>'));
 
   const profileBefore = await inspectProfile(root);
@@ -103,22 +108,33 @@ try {
   check('editable HTML supports local-file save fallback', injected.includes("location.protocol==='file:'") && injected.includes('http://127.0.0.1:4173/__workflow/save'));
   check('editable HTML reports save failures', injected.includes('button.disabled=true') && injected.includes('保存失败'));
   check('editable HTML reports Word and PDF generation', injected.includes('保存并生成 Word/PDF') && injected.includes('Word/PDF 已生成'));
-  check('resume filename uses the detected role', resumeFileName(record, '最终版') === '运维工程师-最终版');
+  check('resume filename uses company and detected role', resumeFileName(record) === 'Alpha-运维工程师');
   check('resume gate accepts scores above three only', passesResumeGate(3.1) && !passesResumeGate(3) && !passesResumeGate(2.9));
 
   const first = await saveFinalHtml('job-alpha', editable, root);
   const second = await saveFinalHtml('job-alpha', editable.replace('CV', 'CV v2'), root);
-  check('first confirmed HTML uses the role-based filename', first.path.endsWith('/job-alpha/运维工程师-最终版.html'));
-  check('second confirmed HTML is versioned instead of overwriting', second.path.endsWith('/job-alpha/运维工程师-最终版.v2.html'));
+  check('first confirmed HTML uses the company-role filename', first.path.endsWith('/job-alpha/Alpha-运维工程师.html'));
+  check('second confirmed HTML overwrites the stable final path', second.path.endsWith('/job-alpha/Alpha-运维工程师.html'));
   const photoSizedHtml = '<!doctype html><html><body><div class="page">' + 'x'.repeat(5 * 1024 * 1024) + '</div></body></html>';
   const photoSizedSave = await saveFinalHtml('job-alpha', photoSizedHtml, root);
-  check('confirmed HTML accepts photo-sized payloads', photoSizedSave.path.endsWith('/job-alpha/运维工程师-最终版.v3.html'));
-  check('versioned final HTML files both remain on disk', existsSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.html')) && existsSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.v2.html')));
-  check('saved final HTML contains no workflow editor residue', !readFileSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.v2.html'), 'utf8').includes('workflow-'));
+  check('confirmed HTML accepts photo-sized payloads', photoSizedSave.path.endsWith('/job-alpha/Alpha-运维工程师.html'));
+  check('stable final HTML is overwritten in place', existsSync(join(root, 'output', 'workflow', 'job-alpha', 'Alpha-运维工程师.html')));
+  check('saved final HTML contains no workflow editor residue', !readFileSync(join(root, 'output', 'workflow', 'job-alpha', 'Alpha-运维工程师.html'), 'utf8').includes('workflow-'));
   const word = await renderWord('job-alpha', root);
-  check('Word artifact is generated from the confirmed final HTML', word.path.endsWith('/job-alpha/运维工程师-最终版.docx') && existsSync(join(root, 'output', 'workflow', 'job-alpha', '运维工程师-最终版.docx')));
+  check('Word artifact is generated from the confirmed final HTML', word.path.endsWith('/job-alpha/Alpha-运维工程师.docx') && existsSync(join(root, 'output', 'workflow', 'job-alpha', 'Alpha-运维工程师.docx')));
   const wordSummary = await renderSummary(root);
   check('summary exposes the Word artifact link', readFileSync(wordSummary.path, 'utf8').includes('>Word</a>'));
+
+  const deleteResult = await deleteWorkflowJob('job-alpha', root);
+  const afterDelete = readFileSync(paths.summary, 'utf8');
+  const jobsAfterDelete = JSON.parse(readFileSync(paths.jobsIndex, 'utf8'));
+  const jobsTextAfterDelete = readFileSync(paths.jobsFile, 'utf8');
+  check('delete removes the workflow record', deleteResult.removed.record && !existsSync(join(paths.records, 'job-alpha.json')));
+  check('delete removes generated output', deleteResult.removed.output && !existsSync(join(paths.output, 'job-alpha')));
+  check('delete removes the report', deleteResult.removed.report && !existsSync(reportPath));
+  check('delete removes the job attachments', deleteResult.removed.attachments === 2 && !existsSync(join(paths.inbox, 'job-alpha.md')) && !existsSync(join(paths.inbox, 'job-alpha-screenshot.png')));
+  check('delete removes all matching job URL lines', deleteResult.removed.jobUrl && !jobsTextAfterDelete.includes('https://example.com/jobs/alpha'));
+  check('delete preserves other jobs and refreshes summary', jobsAfterDelete.jobs.some(job => job.url?.endsWith('/beta')) && jobsAfterDelete.jobs.some(job => job.id === 'unlisted') && !afterDelete.includes('Alpha'));
 } catch (error) {
   fail(`workflow fixture crashed: ${error.message}`);
 } finally {

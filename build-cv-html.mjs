@@ -31,6 +31,7 @@ import { resolve, dirname, basename, join, extname, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import { stripEmptySections } from './cv-sections-core.mjs';
+import { compressImageDataUrl } from './utils/profile-photo.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_PATH = resolve(__dirname, 'templates', 'cv-template.html');
@@ -127,7 +128,12 @@ async function prepareCandidatePhoto(candidate) {
     if (!IMAGE_DATA_URL_RE.test(photo)) {
       throw new Error('Unsupported profile photo data URL (expected base64 PNG, JPEG, WebP, or GIF)');
     }
-    c.photo = photo;
+    try {
+      c.photo = await compressImageDataUrl(photo);
+    } catch (error) {
+      console.warn(`⚠️  Profile photo compression failed, keeping original image: ${error.message}`);
+      c.photo = photo;
+    }
     return c;
   }
 
@@ -155,7 +161,13 @@ async function prepareCandidatePhoto(candidate) {
   if (bytes.length === 0) {
     throw new Error(`Profile photo is empty: ${photo}`);
   }
-  c.photo = `data:${mime};base64,${bytes.toString('base64')}`;
+  const original = `data:${mime};base64,${bytes.toString('base64')}`;
+  try {
+    c.photo = await compressImageDataUrl(original);
+  } catch (error) {
+    console.warn(`⚠️  Profile photo compression failed, keeping original image: ${error.message}`);
+    c.photo = original;
+  }
   return c;
 }
 
@@ -644,7 +656,20 @@ function renderHtml(template, payload, templatePath) {
   if (unresolved) {
     throw new Error(`Unresolved placeholders: ${[...new Set(unresolved)].join(', ')}`);
   }
-  return html;
+  return withA4PreviewLayout(html);
+}
+
+function withA4PreviewLayout(html) {
+  const layoutStyle = `<style id="career-ops-a4-preview">
+:root { --career-ops-a4-content-width: calc(210mm - 1.2in); }
+@media screen {
+  html { background: #eef2f5; }
+  body { width: var(--career-ops-a4-content-width); min-width: var(--career-ops-a4-content-width); max-width: var(--career-ops-a4-content-width); margin: 0 auto; background: #fff; }
+  .page { width: 100% !important; max-width: none !important; }
+}
+</style>`;
+  return html.replace(/<style\b[^>]*id=["']career-ops-a4-preview["'][^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<\/head>/i, `${layoutStyle}</head>`);
 }
 
 function countBullets(payload) {

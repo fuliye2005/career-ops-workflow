@@ -953,8 +953,11 @@ async function renderInPage(browser, html, outputPath, opts = {}) {
     // Wait for fonts and images to settle
     await page.evaluate(() => document.fonts.ready);
 
-    // Generate PDF
-    const pdfBuffer = await page.pdf({
+    // Generate PDF. Browser previews usually have a wider viewport than the
+    // A4 print content box, so a document that appears to fit on screen can
+    // wrap a few extra lines when printed. Try a small, bounded scale-down for
+    // that near-boundary case; genuinely long CVs remain multi-page.
+    const pdfOptions = (scale) => ({
       printBackground: true,
       margin: {
         top: '0',
@@ -963,13 +966,26 @@ async function renderInPage(browser, html, outputPath, opts = {}) {
         left: '0',
       },
       preferCSSPageSize: true,
+      scale,
     });
+    let renderScale = 1;
+    let pdfBuffer = await page.pdf(pdfOptions(renderScale));
+    let pageCount = countRenderedPdfPages(pdfBuffer);
+    if (pageCount > 1 && (opts.maxPages ?? 2) >= 1) {
+      for (const candidateScale of [0.99, 0.98, 0.97, 0.96, 0.94, 0.92, 0.90, 0.88, 0.86, 0.84, 0.82, 0.80, 0.78, 0.76, 0.74]) {
+        const candidate = await page.pdf(pdfOptions(candidateScale));
+        const candidatePageCount = countRenderedPdfPages(candidate);
+        if (candidatePageCount < pageCount) {
+          pdfBuffer = candidate;
+          pageCount = candidatePageCount;
+          renderScale = candidateScale;
+          if (pageCount === 1) break;
+        }
+      }
+    }
 
     // Write PDF
     await writeFile(outputPath, pdfBuffer);
-
-    // Read the root page-tree count so page-like text in streams is ignored.
-    const pageCount = countRenderedPdfPages(pdfBuffer);
 
     // Strict overflow leaves the draft on disk but stops before success logs
     // and manifest publication. Default overflow warns and continues.
@@ -980,6 +996,7 @@ async function renderInPage(browser, html, outputPath, opts = {}) {
 
     console.log(`✅ PDF generated: ${outputPath}`);
     console.log(`📊 Pages: ${pageCount}`);
+    if (renderScale < 1) console.log(`📐 Near-boundary overflow fitted at ${(renderScale * 100).toFixed(0)}% scale`);
     console.log(`📦 Size: ${(pdfBuffer.length / 1024).toFixed(1)} KB`);
 
     try {
