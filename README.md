@@ -345,7 +345,7 @@ You paste a job URL or description
          │
 ┌────────▼─────────┐
 │  A-G Evaluation  │  Match, gaps, comp research, STAR stories, legitimacy
-│  (reads workflow-input/personal-info/personal-info.md) │
+│  (reads workflow-input/profile/ and its compatibility export) │
 └────────┬─────────┘
          │
     ┌────┼────┐
@@ -401,6 +401,7 @@ career-ops/
 ├── GEMINI.md                    # Legacy no-op guard to avoid Antigravity duplicate context
 ├── workflow-input/              # Personal info, JD URLs/attachments, optional photos
 │   ├── personal-info/
+│   ├── profile/                  # Modular candidate facts and familiarity scores
 │   ├── jd/
 │   └── photos/
 ├── cv.md                        # Legacy CV fallback (create this only if needed)

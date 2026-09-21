@@ -18,7 +18,7 @@ Run:
 node workflow.mjs workflow
 ```
 
-The public input scaffold is `workflow-input/`. Personal facts come from `workflow-input/personal-info/personal-info.md`; job URLs go in `workflow-input/jd/jobs.txt`; JD screenshots and other attachments sit beside that file; optional resume photos go in `workflow-input/photos/`. The legacy `jds/` directory remains supported for compatibility. The recommended input is one URL per line; the workflow creates a stable internal job ID automatically:
+The public input scaffold is `workflow-input/`. Prefer modular personal facts from `workflow-input/profile/`; when present, the workflow maintains a compatible `workflow-input/personal-info/personal-info.md` export if the legacy file is still a placeholder. Job URLs go in `workflow-input/jd/jobs.txt`; JD screenshots and other attachments sit beside that file; optional resume photos go in `workflow-input/photos/`. The legacy `jds/` directory remains supported for compatibility. The recommended input is one URL per line; the workflow creates a stable internal job ID automatically:
 
 ```text
 https://example.com/jobs/123
@@ -40,7 +40,7 @@ Read the generated `data/workflow/jobs.json`. For each job, inspect all availabl
 
 Before evaluating any job, check:
 
-- `workflow-input/personal-info/personal-info.md` (legacy `cv.md` remains supported)
+- `workflow-input/profile/` first; the compatibility `workflow-input/personal-info/personal-info.md` export and legacy `cv.md` remain supported
 - `config/profile.yml`
 - `modes/_profile.md`
 
@@ -110,9 +110,10 @@ Use the user's configured output language for human-facing fields. Machine keys 
 
 Only when `score > 3.0`:
 
-1. Build a structured CV payload from `workflow-input/personal-info/personal-info.md` (or legacy `cv.md`) and the evidence-backed tailoring advice. Never add a gap skill as if it were present.
-2. Write the payload to `output/workflow/{job-id}/cv.payload.json`.
-3. Run:
+1. Load `workflow-input/profile/` when present. Each fact has a user-controlled `familiarity` score from 1 to 5. Calculate JD match automatically and rank with `familiarity * 0.4 + jdMatch * 0.6`. Keep the ranked breakdown in `profileRanking`; use type quotas so skills, experience, projects, education, and preferences all have room when appropriate. Lower-familiarity/high-match facts remain available with weaker wording.
+2. Build a structured CV payload from the selected modular facts, the compatibility `personal-info.md`, or legacy `cv.md`, plus the evidence-backed tailoring advice. Never add a gap skill as if it were present.
+3. Write the payload to `output/workflow/{job-id}/cv.payload.json`.
+4. Run:
 
 ```powershell
 node build-cv-html.mjs output/workflow/{job-id}/cv.payload.json output/workflow/{job-id}/{岗位名称}-生成版.html templates/cv-template.zh-minimal.html
@@ -120,7 +121,7 @@ node verify-cv-facts.mjs output/workflow/{job-id}/{岗位名称}-生成版.html
 node workflow.mjs prepare-editable
 ```
 
-4. Update the workflow record with `artifacts.generatedHtml`, `artifacts.editableHtml`, and `resumeStatus: "可编辑"`. Artifact filenames use the detected role title, such as `网络安全交付运维工程师-生成版.html` and `网络安全交付运维工程师-可编辑.html`; illegal filename characters are replaced with `-`.
+5. Update the workflow record with `artifacts.generatedHtml`, `artifacts.editableHtml`, and `resumeStatus: "可编辑"`. Artifact filenames use the detected role title, such as `网络安全交付运维工程师-生成版.html` and `网络安全交付运维工程师-可编辑.html`; illegal filename characters are replaced with `-`. PDF output uses the role title without the `最终版` suffix, for example `网络安全交付运维工程师.pdf`.
 
 The executable layer rejects `prepare-editable`, final HTML saves, Word generation, and PDF generation for records at or below `3.0/5`. It also writes `output/workflow/{job-id}/metadata.json` for passing records. When the user clicks “保存最终版” in the local editor, the server saves the confirmed HTML, then attempts Word and PDF generation using the first supported image in `workflow-input/photos/`, when present. Word and PDF failures are reported separately so one artifact can still succeed when the other fails. The standalone commands `npm run workflow:word` and `npm run workflow:pdf` remain available. Application recommendations remain separate: scores below `4.0/5` should still be treated cautiously.
 

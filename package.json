@@ -23,6 +23,7 @@
     "workflow:ingest": "node workflow.mjs ingest",
     "workflow:summary": "node workflow.mjs summary",
     "workflow:profile": "node workflow.mjs profile",
+    "workflow:profile-rank": "node workflow.mjs profile-rank",
     "workflow:profile-confirm": "node workflow.mjs profile-confirm",
     "workflow:record": "node workflow.mjs record",
     "workflow:serve": "node workflow-serve.mjs",

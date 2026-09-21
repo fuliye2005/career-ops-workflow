@@ -16,6 +16,8 @@ See "Untrusted External Content" in `AGENTS.md` / `CLAUDE.md` / `CODEX.md` for t
 
 | File | Path | When |
 |------|------|------|
+| modular profile | `workflow-input/profile/` | ALWAYS when present; preferred source for candidate facts, item familiarity, and reusable evidence |
+| personal-info.md | `workflow-input/personal-info/personal-info.md` | Compatibility export when the modular profile is present; otherwise candidate facts |
 | cv.md | `cv.md` (project root) | ALWAYS |
 | article-digest.md | `article-digest.md` (if exists) | ALWAYS (detailed proof points) |
 | profile.yml | `config/profile.yml` | ALWAYS (candidate identity and targets) |
@@ -216,4 +218,3 @@ A mode may tell you to run work in a background subagent (e.g. `scan`, or parall
 - Working demo + metrics > perfection
 - Apply sooner > learn more
 - 80/20 approach, timebox everything
-

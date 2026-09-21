@@ -7,6 +7,7 @@ import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { dump as yamlDump, load as yamlLoad } from 'js-yaml';
+import { loadModularProfile, profileSummary, syncLegacyProfile } from './lib/profile-modular.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_SCORE_GATE = 3.0;
@@ -28,10 +29,11 @@ function pathsFor(root = ROOT) {
     root,
     input,
     personalInfoDir,
+    profileDir,
+    profileConfig: join(profileDir, 'profile.yml'),
     personalInfoFile: join(personalInfoDir, 'personal-info.md'),
     inbox,
     photos,
-    profileDir,
     jobsFile: join(inbox, 'jobs.txt'),
     legacyInbox,
     legacyProjectInbox,
@@ -332,11 +334,13 @@ function selectJobInput(paths) {
 
 async function inspectProfile(root = ROOT) {
   const paths = pathsFor(root);
+  const modular = await loadModularProfile(root);
+  if (modular?.hasItems) await syncLegacyProfile(modular, paths.personalInfoFile);
   const personalInfo = paths.personalInfoFile;
   const legacyCv = join(root, 'cv.md');
   const personalText = existsSync(personalInfo) ? await readFile(personalInfo, 'utf8') : '';
   const placeholder = /请将本文件替换|请填写|replace this file|your (personal|resume) information|待填写|placeholder/i.test(personalText);
-  const candidateFile = existsSync(legacyCv) && (!personalText.trim() || placeholder) ? legacyCv : personalInfo;
+  const candidateFile = modular?.hasItems ? personalInfo : (existsSync(legacyCv) && (!personalText.trim() || placeholder) ? legacyCv : personalInfo);
   const files = {
     cv: candidateFile,
     personalInfo,
@@ -358,6 +362,9 @@ async function inspectProfile(root = ROOT) {
     incomplete,
     source: relative(root, candidateFile).split(sep).join('/'),
     files: Object.fromEntries(Object.entries(files).map(([name, filePath]) => [name, relative(root, filePath).split(sep).join('/')])),
+    modular: Boolean(modular?.hasItems),
+    modularProfile: relative(root, paths.profileDir).split(sep).join('/'),
+    itemCount: modular?.items.length || 0,
   };
 }
 function groupAttachment(fileName, knownIds) {
@@ -372,12 +379,20 @@ async function ensureWorkspace(root = ROOT) {
   const paths = pathsFor(root);
   await Promise.all([
     mkdir(paths.personalInfoDir, { recursive: true }),
+    mkdir(paths.profileDir, { recursive: true }),
+    mkdir(join(paths.profileDir, 'skills'), { recursive: true }),
+    mkdir(join(paths.profileDir, 'experience'), { recursive: true }),
+    mkdir(join(paths.profileDir, 'projects'), { recursive: true }),
+    mkdir(join(paths.profileDir, 'education'), { recursive: true }),
+    mkdir(join(paths.profileDir, 'preferences'), { recursive: true }),
     mkdir(paths.inbox, { recursive: true }),
     mkdir(paths.photos, { recursive: true }),
     mkdir(paths.records, { recursive: true }),
     mkdir(paths.runs, { recursive: true }),
     mkdir(paths.output, { recursive: true }),
   ]);
+  const modular = await loadModularProfile(root);
+  if (modular?.hasItems) await syncLegacyProfile(modular, paths.personalInfoFile);
   if (!existsSync(paths.personalInfoFile)) {
     const templatePath = join(paths.personalInfoDir, 'personal-info-template.md');
     if (existsSync(templatePath)) await writeFile(paths.personalInfoFile, await readFile(templatePath, 'utf8'), 'utf8');
@@ -553,6 +568,15 @@ async function saveRecord(record, root = ROOT) {
     artifacts: { ...(existing.artifacts || {}), ...(record.artifacts || {}) },
     updatedAt: record.updatedAt || new Date().toISOString(),
   };
+  const modular = await loadModularProfile(root);
+  if (modular?.hasItems) {
+    let jdText = typeof merged.jdText === 'string' ? merged.jdText : '';
+    if (!jdText && merged.jdPath) {
+      const jdFile = resolveWorkspacePath(root, merged.jdPath);
+      if (existsSync(jdFile)) jdText = await readFile(jdFile, 'utf8');
+    }
+    if (jdText) merged.profileRanking = profileSummary(modular, jdText);
+  }
   if (hasResumeArtifacts(merged.artifacts) && !passesResumeGate(merged.score)) {
     throw new Error(`Resume artifacts require a score greater than ${DEFAULT_SCORE_GATE.toFixed(1)}/5`);
   }
@@ -722,6 +746,8 @@ function renderSummaryHtml(records, jobs, root = ROOT) {
       ...(advice.keywords || []).map(item => `关键词: ${item}`),
       ...(advice.avoid || []).map(item => `表达边界: ${item}`),
     ]; 
+    const rankedItems = Array.isArray(record.profileRanking?.items) ? record.profileRanking.items.slice(0, 8) : [];
+    const rankingDetails = rankedItems.map(item => `${item.title}：熟悉度 ${item.familiarity}/5，JD匹配 ${item.jdMatch}/5，综合 ${item.composite}/5（${item.phrasing}）`);
     const searchText = [record.company, record.role, record.url, recommendation, status, ...skills, adviceText].join(' ').toLowerCase();
     const scoreClass = Number(record.score) >= 4.5 ? 'high' : Number(record.score) >= 4 ? 'good' : Number(record.score) >= 3.5 ? 'mid' : 'low';
     return `<article class="job-row ${scoreClass}" data-search="${escapeAttr(searchText)}" data-score="${escapeAttr(record.score ?? '')}" data-status="${escapeAttr(status)}" data-recommendation="${escapeAttr(recommendation)}" data-pdf="${pdfReady ? 'ready' : 'pending'}" data-time="${timeValue}">
@@ -730,6 +756,7 @@ function renderSummaryHtml(records, jobs, root = ROOT) {
         <div class="meta"><span class="recommendation">${escapeHtml(recommendation)}</span><span>${escapeHtml(status)}</span><span class="pdf-state">PDF ${pdfReady ? '已生成' : '未确定'}</span><span>${escapeHtml(record.updatedAt ? new Date(record.updatedAt).toLocaleString('zh-CN') : '未处理')}</span></div>
         <p class="advice"><strong>修改建议：</strong>${escapeHtml(adviceText)}</p>
         ${adviceDetails.length ? `<details class="advice-details"><summary>查看具体修改建议</summary><ul>${adviceDetails.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></details>` : ''}
+        ${rankingDetails.length ? `<details class="advice-details"><summary>查看资料优先级</summary><ul>${rankingDetails.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></details>` : ''}
         <div class="chips">${skills.slice(0, 8).map(skill => `<span>${escapeHtml(skill)}</span>`).join('') || '<span>等待技能分析</span>'}</div>
         <div class="links">${links}${deleteButton}</div>
       </div>
@@ -1098,6 +1125,14 @@ async function main() {
       console.log(JSON.stringify(await inspectProfile(), null, 2));
       return;
     }
+    if (command === 'profile-rank') {
+      if (!arg) throw new Error('Usage: node workflow.mjs profile-rank <jd-file>');
+      const profile = await loadModularProfile(ROOT);
+      if (!profile?.hasItems) throw new Error('Modular profile is not configured');
+      const jdPath = resolveWorkspacePath(ROOT, arg);
+      console.log(JSON.stringify(profileSummary(profile, await readFile(jdPath, 'utf8')), null, 2));
+      return;
+    }
     if (command === 'profile-confirm') {
       console.log(JSON.stringify(await promoteProfileDraft(), null, 2));
       return;
@@ -1121,7 +1156,7 @@ async function main() {
       console.log(JSON.stringify(await renderWord(arg), null, 2));
       return;
     }
-    console.log('Usage: node workflow.mjs <start|init|ingest|profile|profile-confirm|record|summary|prepare-editable|pdf|word> [argument]');
+    console.log('Usage: node workflow.mjs <start|init|ingest|profile|profile-rank|profile-confirm|record|summary|prepare-editable|pdf|word> [argument]');
   } catch (error) {
     console.error(`workflow: ${error.message}`);
     process.exitCode = 1;
@@ -1139,6 +1174,7 @@ export {
   ensureWorkspace,
   exportProfile,
   inspectProfile,
+  loadModularProfile,
   ingest,
   importProfile,
   loadRecords,
@@ -1151,6 +1187,7 @@ export {
   renderSummary,
   renderSummaryHtml,
   renderSettingsPage,
+  profileSummary,
   resolveWorkspacePath,
   resumeFileName,
   passesResumeGate,

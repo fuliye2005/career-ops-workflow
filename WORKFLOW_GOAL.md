@@ -22,7 +22,7 @@
 
 ## User Workflow
 
-1. 用户把个人信息放入 `workflow-input/personal-info/personal-info.md`。
+1. 用户优先把个人信息拆分放入 `workflow-input/profile/`；旧版 `workflow-input/personal-info/personal-info.md` 继续兼容，并可由模块化资料自动生成。
 2. 用户把岗位资料放入 `workflow-input/jd/`，并在 `workflow-input/jd/jobs.txt` 中每行填写一个岗位 URL；workflow 根据 URL 自动生成内部岗位 ID，用户不需要填写实际岗位 ID。
 3. `workflow-input/jd/` 可并列放入截图、PDF、DOCX、TXT、Markdown 等 JD 文件；只有一个 URL 时附件自动归到该岗位，多岗位附件继续兼容旧的 ID 前缀方式。
 4. 可选照片放入 `workflow-input/photos/`，仅用于本地 Word 简历生成，不提交到公开仓库。
@@ -34,7 +34,9 @@
 
 ## Profile Requirements
 
-- `workflow-input/personal-info/personal-info.md` 是候选人经历、技能和项目事实的主要来源，`cv.md` 仅作为兼容旧流程的回退来源。
+- `workflow-input/profile/` 是候选人模块化事实的主要来源；`personal-info.md` 是兼容导出，`cv.md` 仅作为旧流程回退来源。
+- 每条资料事实使用 1-5 级 `familiarity` 表示面试可讲程度。JD 匹配度由 workflow 自动计算，综合排序使用熟悉度 40%、JD 匹配度 60%。
+- 同一条资料允许跨岗位复用；低熟悉度但高匹配内容保留并降低措辞强度。岗位总结页展示熟悉度、JD 匹配度、综合分及对应措辞建议。
 - workflow 检查并补充 `config/profile.yml` 与 `modes/_profile.md`。
 - 新增或修改个人资料前必须先展示预览和差异，得到用户确认后才能写入。
 - 不得编造技能、经历、项目、指标或工作成果。
@@ -73,15 +75,15 @@ output/workflow/<job-id>/
 |-- cv.generated.html
 |-- cv.editable.html
 |-- cv.final.html
-|-- cv.final.pdf
+|-- <岗位名称>.pdf
 `-- metadata.json
 ```
 
 - `cv.generated.html`：系统自动生成版，不允许被后续运行覆盖。
 - `cv.editable.html`：浏览器编辑入口。
 - `cv.final.html`：用户人工修改并确认后的版本。
-- `cv.final.pdf`：可选产物，只在用户明确触发后生成。
 - `<岗位名称>-最终版.docx`：确认 HTML 后通过 workflow 生成的可编辑 Word 版本。
+- `<岗位名称>.pdf`：确认 HTML 后生成的 PDF，不再添加“最终版”后缀。
 - `metadata.json`：记录岗位 ID、评分、报告、模板、版本和文件状态。
 
 HTML 简历应保留固定版式，允许用户在浏览器中直接修改文字。重新运行 workflow 时必须保留已有人工确认版本，并创建新版本或等待用户决定。
