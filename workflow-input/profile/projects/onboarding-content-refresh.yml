@@ -1,0 +1,35 @@
+id: project-onboarding-content-refresh
+type: project
+title: 新用户上手内容改版
+organization: 上海知行智能科技有限公司
+period: 2023.10—2024.01
+items:
+  - id: project-onboarding-content-refresh-audit
+    title: 新手内容盘点与信息架构
+    content: 盘点 17 篇帮助文档和客服高频咨询，按准备账号、完成首次任务、查看结果、寻求帮助 4 个阶段重组内容；补充 22 条常见问题示例，并确认每条说明对应的产品页面和版本。
+    familiarity: 4
+    role_tags:
+      - AI 产品运营
+      - 产品运营
+      - 用户运营
+      - 客户成功
+    domain_tags:
+      - 新手引导
+      - 知识库
+      - 用户教育
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: project-onboarding-content-refresh-collaboration
+    title: 跨团队校对与效果回看
+    content: 邀请产品和客服同事逐项核对操作步骤、术语与求助路径，按反馈修订后发布；改版后持续两个月查看相关咨询。虚构演示统计口径显示，新手相关重复咨询占比下降约 18%。
+    familiarity: 4
+    role_tags:
+      - AI 产品运营
+      - 产品运营
+      - 用户运营
+    domain_tags:
+      - 内容运营
+      - 跨团队协作
+      - 效果复盘
+    evidence_level: confirmed
+    include_in_cv: true

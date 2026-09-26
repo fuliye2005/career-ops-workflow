@@ -2,7 +2,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { copyFile, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -885,6 +885,7 @@ async function loadProfilePreview(root = ROOT) {
           title: raw.title || raw.name || entry.name.replace(/\.(yml|yaml)$/i, ''),
           organization: raw.organization || raw.company || '',
           period: raw.period || raw.date || '',
+          familiarity: Math.min(5, Math.max(1, Math.round(Number(raw.familiarity) || Number(items[0]?.familiarity) || 3))),
           items: items.map((item, index) => ({
             id: item.id || `${entry.name}-${index}`,
             title: item.title || item.name || raw.title || '未命名条目',
@@ -892,13 +893,13 @@ async function loadProfilePreview(root = ROOT) {
             familiarity: Number(item.familiarity ?? item.priority) || 3,
             includeInCv: item.include_in_cv !== false && item.includeInCv !== false,
             sourceFile: relative(root, filePath).split(sep).join('/'),
-          })).filter(item => item.content),
+          })).filter(item => directory === 'skills' || item.content),
         });
       } catch {
         containers.push({ title: entry.name, organization: '', period: '', items: [] });
       }
     }
-    if (containers.some(container => container.items.length)) groups.push({ label, containers });
+    groups.push({ label, containers });
   }
   return { config, groups };
 }
@@ -908,14 +909,18 @@ function renderProfileHtml(profile, root = ROOT) {
   const summary = profile.config?.summary || '';
   const contact = Object.entries(identity).filter(([, value]) => value).map(([key, value]) => `<span class="contact-item"><strong>${escapeHtml(key)}</strong>${escapeHtml(value)}</span>`).join('');
   const input = (name, value, type = 'text') => `<input class="profile-input" name="${escapeAttr(name)}" type="${type}" value="${escapeAttr(value)}">`;
-  const groupHtml = profile.groups.map(group => `<section class="profile-section"><h2>${escapeHtml(group.label)}</h2>${group.containers.map(container => `<div class="profile-card"><div class="profile-card-heading"><h3>${escapeHtml(container.title)}</h3><span>${escapeHtml([container.organization, container.period].filter(Boolean).join(' · '))}</span></div>${container.items.map(item => `<article class="profile-item" data-profile-item="true" data-source-file="${escapeAttr(item.sourceFile)}" data-item-id="${escapeAttr(item.id)}"><div class="profile-item-heading"><strong>${escapeHtml(item.title)}</strong>${group.label === '教育背景' ? '' : `<span class="familiarity">熟悉度 ${escapeHtml(item.familiarity)}/5</span>`}</div><label>标题${input('title', item.title)}</label><label>内容<textarea name="content">${escapeHtml(item.content)}</textarea></label>${group.label === '教育背景' ? '' : `<div class="profile-item-options"><label>熟悉度<select name="familiarity"><option value="1"${item.familiarity === 1 ? ' selected' : ''}>1 · 了解</option><option value="2"${item.familiarity === 2 ? ' selected' : ''}>2 · 基础使用</option><option value="3"${item.familiarity === 3 ? ' selected' : ''}>3 · 实际接触</option><option value="4"${item.familiarity === 4 ? ' selected' : ''}>4 · 参与较深</option><option value="5"${item.familiarity === 5 ? ' selected' : ''}>5 · 完整掌握</option></select></label><label class="checkbox"><input name="includeInCv" type="checkbox"${item.includeInCv ? ' checked' : ''}>允许进入简历</label></div>`}</article>`).join('')}</div>`).join('')}</section>`).join('');
+  const familiarityPicker = (value, name = 'familiarity') => `<span class="familiarity-picker" data-value="${value}"><select name="${name}" aria-label="熟悉度">${[1, 2, 3, 4, 5].map(score => `<option value="${score}"${score === value ? ' selected' : ''}>${score} · ${['了解', '基础使用', '实际接触', '参与较深', '完整掌握'][score - 1]}</option>`).join('')}</select></span>`;
+  const groupHtml = profile.groups.map(group => `<section class="profile-section"><h2>${escapeHtml(group.label)}</h2>${group.containers.map(container => `<div class="profile-card" data-profile-container="true" data-source-file="${escapeAttr(container.sourceFile)}"><div class="profile-card-heading">${group.label === '技能' ? `<h3>${escapeHtml(container.title)}</h3>` : `<label>${group.label === '教育背景' ? '学历 / 专业' : group.label === '工作经历' ? '职位名称' : '项目名称'}${input('containerTitle', container.title)}</label>`}<div class="profile-card-actions"></div></div>${group.label === '技能' ? '' : `<div class="profile-container-fields"><label>${group.label === '教育背景' ? '学校' : '公司 / 组织'}${input('organization', container.organization)}</label><label>${group.label === '教育背景' ? '就读时间' : '起止时间'}${input('period', container.period)}</label></div>`}<div class="profile-items">${container.items.map(item => `<article class="profile-item" data-profile-item="true" data-source-file="${escapeAttr(item.sourceFile)}" data-item-id="${escapeAttr(item.id)}"><label>内容块标题${input('title', item.title)}</label><label>内容<textarea name="content">${escapeHtml(item.content)}</textarea></label>${group.label === '教育背景' ? '' : `<div class="profile-item-options"><label>熟悉度<select name="familiarity"><option value="1"${item.familiarity === 1 ? ' selected' : ''}>1 · 了解</option><option value="2"${item.familiarity === 2 ? ' selected' : ''}>2 · 基础使用</option><option value="3"${item.familiarity === 3 ? ' selected' : ''}>3 · 实际接触</option><option value="4"${item.familiarity === 4 ? ' selected' : ''}>4 · 参与较深</option><option value="5"${item.familiarity === 5 ? ' selected' : ''}>5 · 完整掌握</option></select></label><label class="checkbox"><input name="includeInCv" type="checkbox"${item.includeInCv ? ' checked' : ''}>允许进入简历</label></div>`}<button type="button" class="link profile-item-remove">删除此内容条</button></article>`).join('')}</div>${group.label === '技能' ? '' : '<button type="button" class="link profile-item-add">＋ 添加内容条</button>'}</div>`).join('')}</section>`).join('');
+  const profileGroupsHtml = profile.groups.map(group => `<section class="profile-section"><h2>${escapeHtml(group.label)}</h2>${group.label === '技能'
+    ? `<div class="profile-card skill-list" data-profile-skill="true" data-source-file="${escapeAttr(group.containers[0]?.sourceFile || 'workflow-input/profile/skills/custom.yml')}"><div class="skill-items">${group.containers.flatMap(container => container.items).map(item => `<div class="skill-row" data-profile-item="true" data-source-file="${escapeAttr(item.sourceFile)}" data-item-id="${escapeAttr(item.id)}"><input class="profile-input" name="title" aria-label="技能名称" value="${escapeAttr(item.title)}"><input type="hidden" name="content" value="${escapeAttr(item.content)}"><input type="checkbox" name="includeInCv" hidden${item.includeInCv ? ' checked' : ''}>${familiarityPicker(item.familiarity)}<button type="button" class="icon-delete skill-remove-button" title="删除此技能" aria-label="删除此技能">×</button></div>`).join('')}</div><div class="profile-addbar"><button type="button" class="link skill-add-button">添加技能</button></div></div>`
+    : group.containers.map(container => `<div class="profile-card" data-profile-container="true" data-source-file="${escapeAttr(container.sourceFile)}"><div class="profile-card-heading"><label>${group.label === '教育背景' ? '学历 / 专业' : group.label === '工作经历' ? '经历名称' : '项目名称'}${input('containerTitle', container.title)}</label>${group.label === '教育背景' ? '' : familiarityPicker(container.familiarity, 'containerFamiliarity')}<button type="button" class="icon-delete profile-remove-button" title="删除整段经历" aria-label="删除整段经历">×</button></div><div class="profile-container-fields"><label>${group.label === '教育背景' ? '学校' : '公司 / 组织'}${input('organization', container.organization)}</label><label>${group.label === '教育背景' ? '就读时间' : '起止时间'}${input('period', container.period)}</label></div><label class="experience-content-label">内容<textarea class="profile-input" name="experienceContent">${escapeHtml(container.items.map(item => `${item.title}：${item.content}`).join('\n'))}</textarea></label></div>`).join('')}</section>`).join('');
   return `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Career-Ops 个人资料</title>
 <style>:root{font-family:"Segoe UI","Microsoft YaHei",Arial,sans-serif;color:#20252b;background:#f5f7f9;line-height:1.5}*{box-sizing:border-box}body{margin:0}.shell{max-width:1080px;margin:0 auto;padding:28px 24px 56px}.topbar{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;border-bottom:1px solid #d9e0e6;padding-bottom:22px}.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#64717e}.title{margin:4px 0 0;font-size:30px;line-height:1.15}.link,.save-button{font-size:12px;color:#155d91;text-decoration:none;border:1px solid #bfd1df;border-radius:4px;padding:6px 9px;background:#fbfdff;cursor:pointer}.link:hover{ text-decoration:underline}.save-button{background:#155d91;color:#fff;border-color:#155d91}.save-button:disabled{opacity:.6;cursor:wait}.profile-intro,.profile-section{margin-top:20px}.profile-intro,.profile-card{background:#fff;border:1px solid #dfe5ea;border-radius:6px;padding:18px}.profile-intro h2,.profile-section h2{margin:0 0 10px;font-size:20px}.profile-intro p{margin:8px 0;color:#3f4b55}.contacts{display:flex;flex-wrap:wrap;gap:10px 18px;color:#52606b;font-size:13px}.contact-item strong{margin-right:5px;color:#20252b}.profile-section h2{border-left:4px solid #2780c2;padding-left:10px}.profile-card{margin:10px 0}.profile-card-heading,.profile-item-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.profile-card-heading h3{margin:0;font-size:17px}.profile-card-heading span{color:#74808a;font-size:12px}.profile-item{border-top:1px solid #edf0f2;margin-top:12px;padding-top:12px}.profile-item-heading strong{font-size:14px}.familiarity{color:#176b45;font-size:12px;white-space:nowrap}.profile-item label{display:block;margin-top:8px;color:#52606b;font-size:12px}.profile-input,.profile-item textarea,.profile-item select{display:block;width:100%;margin-top:4px;border:1px solid #cbd4dc;border-radius:4px;padding:8px;font:inherit;background:#fff}.profile-item textarea{min-height:72px;resize:vertical}.profile-item-options{display:flex;gap:18px;align-items:center}.profile-item-options label{flex:0 0 auto}.profile-item-options select{width:auto;min-width:160px}.checkbox{display:flex!important;align-items:center;gap:6px}.checkbox input{width:auto}.savebar{position:sticky;bottom:14px;margin-top:22px;padding:12px;background:#202a33;border-radius:6px;color:#fff;display:flex;align-items:center;gap:12px}.savebar span{font-size:12px;color:#d5e0e8}.empty{padding:32px;background:#fff;border:1px dashed #cbd4dc;color:#687581;text-align:center}@media(max-width:680px){.shell{padding:20px 14px 40px}.topbar{display:block}.title{font-size:25px}.profile-card-heading,.profile-item-heading{display:block}.familiarity{display:block;margin-top:4px}.profile-item-options{display:block}}</style></head>
 <body><main class="shell"><header class="topbar"><div><div class="eyebrow">CAREER-OPS / PROFILE</div><h1 class="title">个人资料</h1><nav style="display:flex;gap:8px;margin-top:12px"><a class="link" href="index.html">岗位总览</a><a class="link" href="profile.html">个人资料</a><a class="link" href="settings.html">导出设置</a></nav></div><div class="eyebrow">本地资料 · 可编辑</div></header>
 <section class="profile-intro"><h2>资料迁移</h2><p>导出 JSON 会包含模块化个人资料、个人信息 Markdown 和照片，便于在另一台设备的同一个 Workflow 中恢复使用。文件保存在你选择的下载位置，不会自动上传。</p><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="link" id="export-profile" type="button">导出个人资料 JSON</button><button class="link" id="import-profile" type="button">导入个人资料 JSON</button><input id="profile-file" type="file" accept="application/json,.json" hidden><span id="transfer-message" style="font-size:12px;color:#52606b"></span></div></section>
 <form id="profile-form"><section class="profile-intro"><h2>基本信息</h2><div class="contacts"><label>姓名${input('identity.name', identity.name || '')}</label><label>邮箱${input('identity.email', identity.email || '', 'email')}</label><label>电话${input('identity.phone', identity.phone || '')}</label><label>地点${input('identity.location', identity.location || '')}</label></div><label>个人简介<textarea class="profile-input" name="summary">${escapeHtml(summary)}</textarea></label></section>
-${groupHtml || '<div class="empty">暂未发现模块化个人资料。请先在 workflow-input/profile/ 中填写资料。</div>'}
+${profileGroupsHtml || '<div class="empty">暂未发现模块化个人资料。请先在 workflow-input/profile/ 中填写资料。</div>'}
 <div class="savebar"><button class="save-button" type="submit">保存个人资料</button><span id="save-message">修改后点击保存，内容会写回本地 profile 目录。</span></div></form>
 </main><script>(function(){const form=document.querySelector('#profile-form');const message=document.querySelector('#save-message');const transferMessage=document.querySelector('#transfer-message');const exportButton=document.querySelector('#export-profile');const importButton=document.querySelector('#import-profile');const fileInput=document.querySelector('#profile-file');if(exportButton){exportButton.addEventListener('click',async()=>{exportButton.disabled=true;transferMessage.textContent='正在准备 JSON…';try{const response=await fetch('/__workflow/profile/export',{method:'POST'});const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'导出失败');const blob=new Blob([JSON.stringify(data.profile,null,2)+'\\n'],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');const date=new Date().toISOString().slice(0,10);link.href=url;link.download='career-ops-profile-'+date+'.json';link.click();URL.revokeObjectURL(url);transferMessage.textContent='已导出 JSON，包含 '+(data.profile.modules?.length||0)+' 个资料模块和 '+(data.profile.photos?.length||0)+' 张照片';}catch(error){transferMessage.textContent='导出失败：'+(error.message||error)}finally{exportButton.disabled=false}});}if(importButton&&fileInput){importButton.addEventListener('click',()=>fileInput.click());fileInput.addEventListener('change',async()=>{const file=fileInput.files?.[0];if(!file)return;importButton.disabled=true;transferMessage.textContent='正在导入并保存…';try{const payload=JSON.parse(await file.text());const response=await fetch('/__workflow/profile/import',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'导入失败');transferMessage.textContent='导入成功，页面即将刷新';setTimeout(()=>location.reload(),500);}catch(error){transferMessage.textContent='导入失败：'+(error.message||error)}finally{importButton.disabled=false;fileInput.value='';}});}if(!form)return;form.addEventListener('submit',async(event)=>{event.preventDefault();const identity={};for(const field of form.querySelectorAll('[name^="identity."]'))identity[field.name.slice(9)]=field.value;const changes=[...form.querySelectorAll('[data-profile-item="true"]')].map(item=>({sourceFile:item.dataset.sourceFile,itemId:item.dataset.itemId,title:item.querySelector('[name="title"]').value,content:item.querySelector('[name="content"]').value,familiarity:item.querySelector('[name="familiarity"]')?.value,includeInCv:item.querySelector('[name="includeInCv"]')?.checked??true}));const button=form.querySelector('button[type="submit"]');button.disabled=true;message.textContent='正在保存…';try{const response=await fetch('/__workflow/profile/save',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({identity,summary:form.querySelector('[name="summary"]').value,changes})});const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'保存失败');message.textContent='已保存，页面将在几秒后刷新';setTimeout(()=>location.reload(),400)}catch(error){message.textContent='保存失败：'+(error.message||error)}finally{button.disabled=false}});})();</script></body></html>`;
 }
@@ -923,7 +928,151 @@ ${groupHtml || '<div class="empty">暂未发现模块化个人资料。请先在
 async function renderProfilePage(root = ROOT) {
   const paths = await ensureWorkspace(root);
   const profile = await loadProfilePreview(root);
-  await writeAtomic(paths.profilePage, renderProfileHtml(profile, root));
+  const enhancements = `<style>
+.profile-container-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border-bottom:1px solid #edf0f2;padding:10px 0}
+.profile-container-fields label,.profile-item label{display:block;color:#52606b;font-size:12px}.profile-container-fields .profile-input,.profile-item .profile-input{font-size:14px}
+.profile-addbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.profile-new-card{border:1px dashed #89a8bd;background:#fafdff}
+.profile-new-note{font-size:12px;color:#64717e;margin:0 0 8px}.profile-remove-button,.profile-item-remove{color:#a33;border-color:#e4b8b8;margin-top:10px}
+.profile-item{border-top:1px solid #edf0f2;margin-top:12px;padding-top:12px}.profile-item textarea{min-height:84px;resize:vertical}
+@media(max-width:680px){.profile-container-fields{grid-template-columns:1fr}}
+</style><script>(function(){
+const form=document.querySelector('#profile-form');if(!form)return;
+const make=(tag,props={},text='')=>{const el=document.createElement(tag);for(const [k,v] of Object.entries(props))el.setAttribute(k,v);if(text)el.textContent=text;return el};
+const itemEditor=(container,category)=>{const item=make('article',{class:'profile-item','data-new-item':'true'});const title=make('label',{},'内容块标题');title.append(make('input',{class:'profile-input',name:'itemTitle',placeholder:'例如：主要工作内容'}));item.append(title);const content=make('label',{},'内容');content.append(make('textarea',{class:'profile-input',name:'itemContent',placeholder:'填写具体工作、项目内容或教育信息'}));item.append(content);if(category!=='education'){const rating=make('label',{},'熟悉度（1—5）');const select=make('select',{class:'profile-input',name:'itemFamiliarity'});for(let i=1;i<=5;i++)select.append(make('option',{value:String(i)},String(i)));select.value='3';rating.append(select);item.append(rating)}const remove=make('button',{type:'button',class:'link profile-item-remove'},'移除此内容块');remove.addEventListener('click',()=>item.remove());item.append(remove);container.querySelector('.profile-items').append(item)};
+for(const section of document.querySelectorAll('.profile-section')){
+ const label=section.querySelector('h2')?.textContent;const category=label==='工作经历'?'experience':label==='项目经历'?'projects':label==='教育背景'?'education':null;if(!category)continue;
+ for(const card of section.querySelectorAll('[data-profile-container="true"]')){
+  for(const button of card.querySelectorAll('.profile-item-remove'))button.addEventListener('click',()=>{const item=button.closest('[data-profile-item]');item.dataset.removeItem='true';item.hidden=true});
+  card.querySelector('.profile-item-add')?.addEventListener('click',()=>itemEditor(card,category));
+  const remove=make('button',{type:'button',class:'link profile-remove-button'},'移除此经历块（可恢复）');remove.addEventListener('click',()=>{card.dataset.removeContainer='true';card.hidden=true});card.append(remove);
+ }
+ const bar=make('div',{class:'profile-addbar'});const add=make('button',{type:'button',class:'link'},category==='experience'?'＋ 添加工作经历':category==='projects'?'＋ 添加项目经历':'＋ 添加教育经历');
+ add.addEventListener('click',()=>{const card=make('div',{class:'profile-card profile-new-card','data-new-container':category});card.append(make('p',{class:'profile-new-note'},'填写经历信息和内容块，点击页面底部保存。'));const fields=make('div',{class:'profile-container-fields'});const field=(caption,name,placeholder)=>{const wrap=make('label',{},caption);wrap.append(make('input',{class:'profile-input',name,placeholder}));fields.append(wrap)};field(category==='education'?'学历 / 专业':category==='experience'?'职位名称':'项目名称','containerTitle','填写名称');field(category==='education'?'学校':'公司 / 组织','organization',category==='education'?'学校名称':'公司或组织');field(category==='education'?'就读时间':'起止时间','period','例如：2022.09—2026.06');card.append(fields);card.append(make('div',{class:'profile-items'}));itemEditor(card,category);const addItem=make('button',{type:'button',class:'link profile-item-add'},'＋ 添加内容块');addItem.addEventListener('click',()=>itemEditor(card,category));card.append(addItem);const cancel=make('button',{type:'button',class:'link profile-remove-button'},'移除此未保存经历');cancel.addEventListener('click',()=>card.remove());card.append(cancel);section.insertBefore(card,bar)});
+ bar.append(add);section.append(bar);
+}
+form.addEventListener('submit',()=>{const original=window.fetch;window.fetch=async function(url,options={}){if(String(url).includes('/__workflow/profile/save')&&options.body){try{const payload=JSON.parse(options.body);
+ payload.changes=payload.changes.filter(change=>![...form.querySelectorAll('[data-profile-item]')].some(item=>item.dataset.sourceFile===change.sourceFile&&item.dataset.itemId===change.itemId&&item.hasAttribute('data-remove-item')));
+ payload.containers=[...form.querySelectorAll('[data-profile-container="true"]:not([data-remove-container])')].map(card=>({sourceFile:card.dataset.sourceFile,title:card.querySelector('[name="containerTitle"]')?.value,organization:card.querySelector('[name="organization"]')?.value,period:card.querySelector('[name="period"]')?.value,familiarity:card.querySelector('[name="containerFamiliarity"]')?.value}));
+ payload.removals=[...form.querySelectorAll('[data-profile-container][data-remove-container]')].map(card=>card.dataset.sourceFile);
+ payload.newContainers=[...form.querySelectorAll('[data-new-container]:not([data-remove-container])')].map(card=>({category:card.dataset.newContainer,title:card.querySelector('[name="containerTitle"]')?.value,organization:card.querySelector('[name="organization"]')?.value,period:card.querySelector('[name="period"]')?.value,items:[...card.querySelectorAll('[data-new-item]:not([data-remove-item])')].map(item=>({title:item.querySelector('[name="itemTitle"]')?.value,content:item.querySelector('[name="itemContent"]')?.value,familiarity:item.querySelector('[name="itemFamiliarity"]')?.value}))}));
+ payload.itemRemovals=[...form.querySelectorAll('[data-profile-item][data-remove-item]')].map(item=>({sourceFile:item.dataset.sourceFile,itemId:item.dataset.itemId}));
+ payload.newItems=[...form.querySelectorAll('[data-profile-container="true"] [data-new-item]:not([data-remove-item])')].map(item=>({sourceFile:item.closest('[data-profile-container]').dataset.sourceFile,title:item.querySelector('[name="itemTitle"]')?.value,content:item.querySelector('[name="itemContent"]')?.value,familiarity:item.querySelector('[name="itemFamiliarity"]')?.value,includeInCv:true}));
+ options={...options,body:JSON.stringify(payload)};}catch{}}window.fetch=original;return original.call(this,url,options)};},{capture:true,once:true});
+})();</script>`;
+  const editorPolish = `<style>
+.profile-card-heading{display:flex;align-items:flex-end;gap:10px}.profile-card-heading>label{flex:1}.profile-card-actions{display:flex;align-items:center}.profile-item-heading{display:flex;align-items:flex-end;gap:8px}.profile-item-heading>label{flex:1}.icon-delete{flex:0 0 28px;width:28px;height:28px;padding:0;border:1px solid #e2c1c1;border-radius:50%;background:#fff;color:#a33;font-size:20px;line-height:1;cursor:pointer}.icon-delete:hover{background:#fff0f0;border-color:#c77}.profile-addbar .link,.profile-item-add{padding:7px 12px}
+</style><script>(function(){
+const form=document.querySelector('#profile-form');if(!form)return;
+const undo= document.createElement('button');undo.type='button';undo.className='link';undo.textContent='撤回一次修改';undo.title='撤销最近一次字段编辑、添加或删除';undo.disabled=true;
+const savebar=form.querySelector('.savebar');savebar.insertBefore(undo,savebar.querySelector('button[type="submit"]'));
+let undoAction=null,pending=null;
+const setUndo=(fn)=>{undoAction=fn;undo.disabled=!fn};
+const valueOf=(el)=>el.type==='checkbox'?el.checked:el.value;
+const applyValue=(el,value)=>{if(el.type==='checkbox')el.checked=value;else el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));};
+const makeX=(label)=>{const b=document.createElement('button');b.type='button';b.className='icon-delete';b.textContent='×';b.title=label;b.setAttribute('aria-label',label);return b};
+const decorate=(root)=>{
+ for(const card of root.querySelectorAll('[data-profile-container="true"],.profile-new-card')){
+  const header=card.querySelector('.profile-card-heading')||card.insertBefore(document.createElement('div'),card.firstChild);header.classList.add('profile-card-heading');
+  header.querySelector('h3')?.remove();header.querySelector('span')?.remove();
+  const meta=card.querySelector('.profile-container-fields');const name=header.querySelector('[name="containerTitle"]')?null:meta?.querySelector('label');
+  if(name&&!header.contains(name))header.insertBefore(name,header.querySelector('.profile-card-actions')||null);
+  let actions=header.querySelector('.profile-card-actions');if(!actions){actions=document.createElement('div');actions.className='profile-card-actions';header.append(actions)}
+  const groupLabel=card.closest('.profile-section')?.querySelector('h2')?.textContent;
+  let wholeRemove=card.querySelector(':scope > .profile-remove-button');
+  if(groupLabel!=='技能'&&!wholeRemove){wholeRemove=makeX(card.hasAttribute('data-new-container')?'移除此未保存经历':'删除整个经历');wholeRemove.classList.add('profile-remove-button');actions.append(wholeRemove)}
+  else if(wholeRemove){wholeRemove.textContent='×';wholeRemove.title=card.hasAttribute('data-new-container')?'移除此未保存经历':'删除整个经历';wholeRemove.setAttribute('aria-label',wholeRemove.title);wholeRemove.classList.add('icon-delete');actions.append(wholeRemove)}
+  for(const item of card.querySelectorAll('.profile-item')){
+   let itemHead=item.querySelector('.profile-item-heading');if(!itemHead){itemHead=document.createElement('div');itemHead.className='profile-item-heading';item.insertBefore(itemHead,item.firstChild)}
+   itemHead.querySelector('strong')?.remove();
+   const itemTitle=item.querySelector('[name="title"], [name="itemTitle"]')?.closest('label');if(itemTitle&&!itemHead.contains(itemTitle))itemHead.insertBefore(itemTitle,itemHead.firstChild);
+   let remove=item.querySelector('.profile-item-remove');if(!remove){remove=makeX('删除这条内容');remove.classList.add('profile-item-remove');itemHead.append(remove)}else{remove.textContent='×';remove.title='删除这条内容';remove.setAttribute('aria-label',remove.title);remove.classList.add('icon-delete');itemHead.append(remove)}
+  }
+  const itemAdd=card.querySelector('.profile-item-add');if(itemAdd){itemAdd.textContent='添加内容';itemAdd.title='在这段经历下面添加一条内容'}
+ }
+ for(const b of root.querySelectorAll('.profile-addbar button')){b.textContent='添加经历';b.title='新增一段经历'}
+};
+decorate(form);
+const observer=new MutationObserver(()=>decorate(form));observer.observe(form,{childList:true,subtree:true});
+form.addEventListener('focusin',event=>{const el=event.target;if(!el.matches('input.profile-input,textarea.profile-input,select.profile-input'))return;pending={el,value:valueOf(el)}});
+const changed=event=>{if(!pending||pending.el!==event.target||valueOf(pending.el)===pending.value)return;const saved=pending;setUndo(()=>{applyValue(saved.el,saved.value);pending=null})};
+form.addEventListener('input',changed);form.addEventListener('change',changed);
+form.addEventListener('click',event=>{
+ const button=event.target.closest('button');if(!button)return;
+ if(button===undo){if(undoAction){const action=undoAction;setUndo(null);action()}return}
+ if(button.matches('.profile-item-remove,.profile-remove-button')){
+  event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+  const block=button.closest('[data-profile-container],.profile-new-card');const item=button.closest('[data-profile-item],[data-new-item]');const target=item||block;if(!target)return;
+  target.dataset[item?'removeItem':'removeContainer']='true';target.hidden=true;
+  setUndo(()=>{target.hidden=false;delete target.dataset[item?'removeItem':'removeContainer']});return;
+ }
+ if(button.matches('.profile-item-add')){queueMicrotask(()=>{const card=button.closest('[data-profile-container],.profile-new-card');const list=card?.querySelector('.profile-items');const item=list?.lastElementChild;if(item)setUndo(()=>item.remove())});return}
+ if(button.closest('.profile-addbar')){queueMicrotask(()=>{const card=button.closest('.profile-addbar')?.previousElementSibling;if(card?.classList.contains('profile-new-card'))setUndo(()=>card.remove())});return}
+ if(button.classList.contains('profile-new-cancel')){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();const card=button.closest('.profile-new-card');card.dataset.removeContainer='true';card.hidden=true;setUndo(()=>{card.hidden=false;delete card.dataset.removeContainer})}
+},true);
+})();</script>`;
+  const compactEditor = `<style>
+.profile-container-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border-bottom:1px solid #edf0f2;padding:10px 0}
+.profile-card-heading{display:flex;justify-content:flex-start;align-items:flex-end;gap:10px}.profile-card-heading>label{flex:1;min-width:0}.profile-card-heading .profile-input{font-size:16px;font-weight:600}
+.experience-content-label{display:block;margin-top:12px;color:#52606b;font-size:12px}#profile-form textarea.profile-input{width:auto;max-width:100%;min-height:0;resize:none;overflow-y:hidden;overflow-wrap:anywhere}
+.contacts .profile-input{width:auto;min-width:96px;max-width:100%}
+.familiarity-picker{position:relative;display:inline-block;flex:0 0 48px;width:48px;height:38px;margin-top:4px}.familiarity-picker select{width:100%;height:100%;border:1px solid #cbd4dc;border-radius:4px;background:#fff;color:transparent;appearance:none;cursor:pointer}.familiarity-picker option{color:#20252b;font-size:14px}.familiarity-picker::after{content:attr(data-value);position:absolute;left:0;top:0;width:100%;height:100%;display:grid;place-items:center;pointer-events:none;color:#20252b}
+.icon-delete{flex:0 0 28px;width:28px;height:28px;padding:0;border:1px solid #e2c1c1;border-radius:50%;background:#fff;color:#a33;font-size:20px;line-height:1;cursor:pointer}.icon-delete:hover{background:#fff0f0;border-color:#c77}
+.skill-row{display:flex;align-items:center;gap:8px;margin:8px 0}.skill-row[hidden]{display:none}.skill-row .profile-input{flex:1;min-width:0;margin:0}.skill-row .icon-delete{margin:0}
+.profile-addbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.profile-new-card{border:1px dashed #89a8bd;background:#fafdff}.profile-new-note{font-size:12px;color:#64717e;margin:0 0 8px}
+@media(max-width:680px){.profile-container-fields{grid-template-columns:1fr}.profile-card-heading{align-items:center}.skill-row{gap:6px}}
+</style><script>(function(){
+const form=document.querySelector('#profile-form');if(!form)return;
+const make=(tag,attrs={},text='')=>{const el=document.createElement(tag);for(const [key,value] of Object.entries(attrs))el.setAttribute(key,value);if(text)el.textContent=text;return el};
+form.addEventListener('keydown',event=>{if(event.key==='Enter'&&event.target.matches('input:not([type="button"]):not([type="checkbox"]):not([type="file"])'))event.preventDefault()},true);
+const measure=document.createElement('canvas').getContext('2d');
+const fitTextarea=el=>{el.rows=1;measure.font=getComputedStyle(el).font;const lines=el.value.split('\\n');const width=Math.max(72,...lines.map(line=>Math.ceil(measure.measureText(line||' ').width)+22));const max=Math.max(72,(el.closest('.profile-card,.profile-intro')?.clientWidth||form.clientWidth)-36);el.style.width=Math.min(width,max)+'px';el.style.height='auto';el.style.height=el.scrollHeight+'px'};
+for(const el of form.querySelectorAll('textarea.profile-input'))fitTextarea(el);
+form.addEventListener('input',event=>{if(event.target.matches('textarea.profile-input'))fitTextarea(event.target)});
+window.addEventListener('resize',()=>{for(const el of form.querySelectorAll('textarea.profile-input'))fitTextarea(el)});
+const fitIdentity=el=>{measure.font=getComputedStyle(el).font;const width=Math.max(96,Math.ceil(measure.measureText(el.value||' ').width)+22);const max=Math.max(96,(form.querySelector('.contacts')?.clientWidth||form.clientWidth)-36);el.style.width=Math.min(width,max)+'px'};
+for(const el of form.querySelectorAll('.contacts .profile-input'))fitIdentity(el);
+form.addEventListener('input',event=>{if(event.target.matches('.contacts .profile-input'))fitIdentity(event.target)});
+const syncPicker=select=>{if(select?.parentElement?.classList.contains('familiarity-picker'))select.parentElement.dataset.value=select.value};
+form.addEventListener('input',event=>syncPicker(event.target));form.addEventListener('change',event=>syncPicker(event.target));
+const newPicker=name=>{const wrap=make('span',{class:'familiarity-picker','data-value':'3'});const select=make('select',{name,'aria-label':'熟悉度'});for(const [score,label] of ['了解','基础使用','实际接触','参与较深','完整掌握'].entries())select.append(make('option',{value:String(score+1)},String(score+1)+' · '+label));select.value='3';wrap.append(select);return wrap};
+const undo=make('button',{type:'button',class:'link',title:'撤销最近一次编辑、添加或删除'},'撤回一次修改');undo.disabled=true;const savebar=form.querySelector('.savebar');savebar.insertBefore(undo,savebar.querySelector('[type="submit"]'));
+let undoAction=null,pending=null;const setUndo=fn=>{undoAction=fn;undo.disabled=!fn};
+const currentValue=el=>el.type==='checkbox'?el.checked:el.value;
+form.addEventListener('focusin',event=>{const el=event.target;if(el.matches('.profile-input,[name="includeInCv"]'))pending={el,value:currentValue(el)}});
+const recordEdit=event=>{if(!pending||pending.el!==event.target||currentValue(pending.el)===pending.value)return;const saved=pending;setUndo(()=>{pending=null;if(saved.el.type==='checkbox')saved.el.checked=saved.value;else saved.el.value=saved.value;saved.el.dispatchEvent(new Event('input',{bubbles:true}))})};
+form.addEventListener('input',recordEdit);form.addEventListener('change',recordEdit);
+const newSkill=card=>{const item=make('div',{class:'skill-row','data-new-skill':'true'});item.append(make('input',{class:'profile-input',name:'title',placeholder:'填写技能名称','aria-label':'技能名称'}));item.append(newPicker('familiarity'));item.append(make('button',{type:'button',class:'icon-delete skill-remove-button',title:'删除此技能','aria-label':'删除此技能'},'×'));card.querySelector('.skill-items').append(item);return item};
+for(const card of form.querySelectorAll('[data-profile-skill="true"]'))card.querySelector('.skill-add-button').addEventListener('click',()=>{const item=newSkill(card);setUndo(()=>item.remove())});
+form.addEventListener('click',event=>{const button=event.target.closest('.skill-remove-button');if(!button)return;event.preventDefault();const item=button.closest('.skill-row');item.dataset.removeItem='true';item.hidden=true;setUndo(()=>{item.hidden=false;delete item.dataset.removeItem})});
+const categoryFor=label=>label==='工作经历'?'experience':label==='项目经历'?'projects':label==='教育背景'?'education':null;
+for(const section of form.querySelectorAll('.profile-section')){
+ const category=categoryFor(section.querySelector('h2')?.textContent);if(!category)continue;
+ const bar=make('div',{class:'profile-addbar'});const add=make('button',{type:'button',class:'link'},'添加经历');bar.append(add);
+ add.addEventListener('click',()=>{const card=make('div',{class:'profile-card profile-new-card','data-new-container':category});
+  card.append(make('p',{class:'profile-new-note'},'填写经历名称、单位/学校、时间和内容后保存。'));
+  const header=make('div',{class:'profile-card-heading'});const title=make('label',{},category==='education'?'学历 / 专业':category==='experience'?'经历名称':'项目名称');title.append(make('input',{class:'profile-input',name:'containerTitle',placeholder:'填写名称'}));header.append(title);if(category!=='education')header.append(newPicker('containerFamiliarity'));
+  const remove=make('button',{type:'button',class:'icon-delete profile-remove-button',title:'移除此未保存经历','aria-label':'移除此未保存经历'},'×');header.append(remove);card.append(header);
+  const fields=make('div',{class:'profile-container-fields'});const org=make('label',{},category==='education'?'学校':'公司 / 组织');org.append(make('input',{class:'profile-input',name:'organization',placeholder:category==='education'?'学校名称':'公司或组织'}));fields.append(org);
+  const period=make('label',{},category==='education'?'就读时间':'起止时间');period.append(make('input',{class:'profile-input',name:'period',placeholder:'例如：2022.09—2026.06'}));fields.append(period);card.append(fields);
+  const content=make('label',{class:'experience-content-label'},'内容');content.append(make('textarea',{class:'profile-input',name:'experienceContent',placeholder:'一段经历写在这里；可以分行列出主要内容'}));card.append(content);
+  section.insertBefore(card,bar);fitTextarea(content.querySelector('textarea'));setUndo(()=>card.remove());
+ });section.append(bar);
+}
+form.addEventListener('click',event=>{const button=event.target.closest('.profile-remove-button');if(!button)return;event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();const card=button.closest('[data-profile-container],.profile-new-card');if(!card)return;card.dataset.removeContainer='true';card.hidden=true;setUndo(()=>{card.hidden=false;delete card.dataset.removeContainer})},true);
+undo.addEventListener('click',()=>{if(!undoAction)return;const action=undoAction;setUndo(null);action()});
+form.addEventListener('submit',()=>{const original=window.fetch;window.fetch=async function(url,options={}){if(String(url).includes('/__workflow/profile/save')&&options.body){try{const payload=JSON.parse(options.body);
+ payload.changes=payload.changes.filter(change=>![...form.querySelectorAll('[data-profile-item][data-remove-item]')].some(item=>item.dataset.itemId===change.itemId&&item.dataset.sourceFile===change.sourceFile));
+ payload.containers=[...form.querySelectorAll('[data-profile-container="true"]:not([data-remove-container])')].map(card=>({sourceFile:card.dataset.sourceFile,title:card.querySelector('[name="containerTitle"]')?.value,organization:card.querySelector('[name="organization"]')?.value,period:card.querySelector('[name="period"]')?.value}));
+ payload.removals=[...form.querySelectorAll('[data-profile-container][data-remove-container]')].map(card=>card.dataset.sourceFile);
+ payload.newContainers=[...form.querySelectorAll('[data-new-container]:not([data-remove-container])')].map(card=>({category:card.dataset.newContainer,title:card.querySelector('[name="containerTitle"]')?.value,organization:card.querySelector('[name="organization"]')?.value,period:card.querySelector('[name="period"]')?.value,familiarity:card.querySelector('[name="containerFamiliarity"]')?.value,items:[{title:'主要内容',content:card.querySelector('[name="experienceContent"]')?.value||'',familiarity:card.querySelector('[name="containerFamiliarity"]')?.value}]}));
+ payload.experienceContents=[...form.querySelectorAll('[data-profile-container="true"]:not([data-remove-container])')].map(card=>({sourceFile:card.dataset.sourceFile,content:card.querySelector('[name="experienceContent"]')?.value||''}));
+ payload.itemRemovals=[...form.querySelectorAll('[data-profile-skill="true"] [data-profile-item][data-remove-item]')].map(item=>({sourceFile:item.dataset.sourceFile,itemId:item.dataset.itemId}));
+ payload.newItems=[...form.querySelectorAll('[data-profile-skill="true"] [data-new-skill]:not([data-remove-item])')].map(item=>({sourceFile:item.closest('[data-profile-skill]').dataset.sourceFile,title:item.querySelector('[name="title"]').value,content:'',familiarity:item.querySelector('[name="familiarity"]').value,includeInCv:true}));
+ options={...options,body:JSON.stringify(payload)};
+ }catch{}}window.fetch=original;return original.call(this,url,options)};},{capture:true,once:true});
+})();</script>`;
+  const html = renderProfileHtml(profile, root).replace('</body>', `${compactEditor}</body>`);
+  await writeAtomic(paths.profilePage, html);
   return { path: paths.profilePage };
 }
 
@@ -948,6 +1097,179 @@ async function saveProfile(payload, root = ROOT) {
   config.identity = { ...(config.identity || {}), ...(payload?.identity || {}) };
   if (payload?.summary !== undefined) config.summary = String(payload.summary);
   await writeAtomic(profileConfigPath, yamlDump(config, { noRefs: true, lineWidth: 120 }));
+
+  for (const addition of Array.isArray(payload?.newContainers) ? payload.newContainers : []) {
+    const category = String(addition?.category || '');
+    const categoryConfig = {
+      experience: { directory: 'experience', type: 'experience' },
+      projects: { directory: 'projects', type: 'project' },
+      education: { directory: 'education', type: 'education' },
+    }[category];
+    if (!categoryConfig) throw new Error(`不支持新增此类个人资料：${category}`);
+    const title = String(addition?.title || '').trim();
+    if (!title) throw new Error('新增条目的名称不能为空。');
+    const uuid = randomUUID();
+    const items = (Array.isArray(addition?.items) ? addition.items : []).map((sourceItem, index) => {
+      const content = String(sourceItem?.content || '').trim();
+      const item = {
+        id: `${categoryConfig.type}-${uuid}-${index + 1}`,
+        title: String(sourceItem?.title || '主要内容').trim(),
+        content,
+        include_in_cv: true,
+      };
+      if (category !== 'education') item.familiarity = Math.min(5, Math.max(1, Math.round(Number(sourceItem?.familiarity) || 3)));
+      return item;
+    }).filter(item => item.content);
+    if (!items.length) throw new Error(`请为“${title}”至少填写一条内容。`);
+    const raw = {
+      id: `${categoryConfig.type}-${uuid}`,
+      type: categoryConfig.type,
+      title,
+      organization: String(addition?.organization || '').trim(),
+      period: String(addition?.period || '').trim(),
+      items,
+    };
+    if (category !== 'education') raw.familiarity = Math.min(5, Math.max(1, Math.round(Number(addition?.familiarity) || 3)));
+    const filePath = join(paths.profileDir, categoryConfig.directory, `${categoryConfig.type}-${uuid}.yml`);
+    await mkdir(dirname(filePath), { recursive: true });
+    await writeAtomic(filePath, yamlDump(raw, { noRefs: true, lineWidth: 120 }));
+  }
+
+  for (const sourceFile of Array.isArray(payload?.removals) ? payload.removals : []) {
+    const relativeFile = String(sourceFile || '').replace(/\\/g, '/');
+    const filePath = resolve(paths.root, relativeFile);
+    const parent = dirname(filePath);
+    const allowedDirs = ['experience', 'projects', 'education'].map(directory => resolve(paths.profileDir, directory));
+    if (!isWithinRoot(filePath, paths.profileDir) || !allowedDirs.includes(parent) || !['.yml', '.yaml'].includes(extname(filePath).toLowerCase())) {
+      throw new Error(`不能移除此个人资料文件：${relativeFile}`);
+    }
+    if (!existsSync(filePath)) continue;
+    const trashDir = join(paths.profileDir, '.trash');
+    await mkdir(trashDir, { recursive: true });
+    await rename(filePath, join(trashDir, `${randomUUID()}-${filePath.split(sep).at(-1)}`));
+  }
+
+  for (const container of Array.isArray(payload?.containers) ? payload.containers : []) {
+    const relativeFile = String(container?.sourceFile || '').replace(/\\/g, '/');
+    const filePath = resolve(paths.root, relativeFile);
+    if (!isWithinRoot(filePath, paths.profileDir) || !['.yml', '.yaml'].includes(extname(filePath).toLowerCase())) {
+      throw new Error(`非法个人资料文件路径：${relativeFile}`);
+    }
+    if (!existsSync(filePath)) throw new Error(`个人资料文件不存在：${relativeFile}`);
+    const raw = yamlLoad(await readFile(filePath, 'utf8')) || {};
+    if (!Array.isArray(raw.items)) throw new Error(`个人资料文件不支持容器编辑：${relativeFile}`);
+    raw.title = String(container.title ?? raw.title ?? '');
+    if ('organization' in raw) raw.organization = String(container.organization ?? raw.organization ?? '');
+    else if ('school' in raw) raw.school = String(container.organization ?? raw.school ?? '');
+    else raw.organization = String(container.organization ?? '');
+    if ('period' in raw) raw.period = String(container.period ?? raw.period ?? '');
+    else if ('date' in raw) raw.date = String(container.period ?? raw.date ?? '');
+    else raw.period = String(container.period ?? '');
+    if (container.familiarity !== undefined && container.familiarity !== null && container.familiarity !== '') {
+      const originalScore = Math.min(5, Math.max(1, Math.round(Number(raw.familiarity) || Number(raw.items[0]?.familiarity) || 3)));
+      const selectedScore = Math.min(5, Math.max(1, Math.round(Number(container.familiarity) || 3)));
+      if (selectedScore !== originalScore) {
+        raw.familiarity = selectedScore;
+        for (const item of raw.items) item.familiarity = selectedScore;
+      }
+    }
+    await writeAtomic(filePath, yamlDump(raw, { noRefs: true, lineWidth: 120 }));
+  }
+
+  for (const experience of Array.isArray(payload?.experienceContents) ? payload.experienceContents : []) {
+    const relativeFile = String(experience?.sourceFile || '').replace(/\\/g, '/');
+    const filePath = resolve(paths.root, relativeFile);
+    if (!isWithinRoot(filePath, paths.profileDir) || !['.yml', '.yaml'].includes(extname(filePath).toLowerCase())) {
+      throw new Error(`非法经历文件路径：${relativeFile}`);
+    }
+    if (!existsSync(filePath)) throw new Error(`个人资料文件不存在：${relativeFile}`);
+    const raw = yamlLoad(await readFile(filePath, 'utf8')) || {};
+    if (!Array.isArray(raw.items)) throw new Error(`个人资料文件不支持经历内容编辑：${relativeFile}`);
+    const lines = String(experience?.content || '').split(/\r?\n/).map(line => line.trim().replace(/^(?:[•*-])\s*/, '')).filter(Boolean);
+    if (!lines.length) throw new Error(`请为“${raw.title || relativeFile}”至少保留一行内容，或删除整段经历。`);
+    const unused = [...raw.items];
+    raw.items = lines.map((line, index) => {
+      let existingIndex = unused.findIndex(item => line.startsWith(`${String(item?.title || '')}：`));
+      if (existingIndex < 0 && unused.length) existingIndex = 0;
+      const existing = existingIndex >= 0 ? unused.splice(existingIndex, 1)[0] : null;
+      if (existing) {
+        const prefix = `${String(existing.title || '')}：`;
+        existing.content = line.startsWith(prefix) ? line.slice(prefix.length).trim() : line;
+        return existing;
+      }
+      return {
+        id: `item-${randomUUID()}`,
+        title: '主要内容',
+        content: line,
+        include_in_cv: true,
+        ...(raw.type === 'education' ? {} : { familiarity: 3 }),
+      };
+    });
+    await writeAtomic(filePath, yamlDump(raw, { noRefs: true, lineWidth: 120 }));
+  }
+
+  for (const skills of Array.isArray(payload?.skillContents) ? payload.skillContents : []) {
+    const relativeFile = String(skills?.sourceFile || '').replace(/\\/g, '/');
+    const filePath = resolve(paths.root, relativeFile);
+    if (!isWithinRoot(filePath, paths.profileDir) || !['.yml', '.yaml'].includes(extname(filePath).toLowerCase())) {
+      throw new Error(`非法技能文件路径：${relativeFile}`);
+    }
+    if (!existsSync(filePath)) throw new Error(`个人资料文件不存在：${relativeFile}`);
+    const raw = yamlLoad(await readFile(filePath, 'utf8')) || {};
+    if (!Array.isArray(raw.items)) throw new Error(`个人资料文件不支持技能内容编辑：${relativeFile}`);
+    const lines = String(skills?.content || '').split(/\r?\n/).map(line => line.trim().replace(/^(?:[•*-])\s*/, '')).filter(Boolean);
+    if (!lines.length) throw new Error(`技能分类“${raw.title || relativeFile}”至少保留一项。`);
+    const unused = [...raw.items];
+    raw.items = lines.map((line, index) => {
+      const familiarityMatch = line.match(/【熟悉度\s*([1-5])\/5】\s*$/);
+      const cleanLine = line.replace(/【熟悉度\s*[1-5]\/5】\s*$/, '').trim();
+      let existingIndex = unused.findIndex(item => cleanLine.startsWith(`${String(item?.title || '')}：`));
+      if (existingIndex < 0 && unused.length) existingIndex = 0;
+      const existing = existingIndex >= 0 ? unused.splice(existingIndex, 1)[0] : null;
+      const separator = cleanLine.indexOf('：');
+      const title = separator >= 0 ? cleanLine.slice(0, separator).trim() : String(existing?.title || `技能 ${index + 1}`);
+      const content = separator >= 0 ? cleanLine.slice(separator + 1).trim() : cleanLine;
+      return existing
+        ? { ...existing, title, content, ...(familiarityMatch ? { familiarity: Number(familiarityMatch[1]) } : {}) }
+        : { id: `skill-${randomUUID()}`, title, content, familiarity: familiarityMatch ? Number(familiarityMatch[1]) : 3, include_in_cv: true };
+    });
+    await writeAtomic(filePath, yamlDump(raw, { noRefs: true, lineWidth: 120 }));
+  }
+
+  for (const removal of Array.isArray(payload?.itemRemovals) ? payload.itemRemovals : []) {
+    const relativeFile = String(removal?.sourceFile || '').replace(/\\/g, '/');
+    const filePath = resolve(paths.root, relativeFile);
+    if (!isWithinRoot(filePath, paths.profileDir) || !['.yml', '.yaml'].includes(extname(filePath).toLowerCase())) {
+      throw new Error(`非法内容条文件路径：${relativeFile}`);
+    }
+    if (!existsSync(filePath)) continue;
+    const raw = yamlLoad(await readFile(filePath, 'utf8')) || {};
+    if (!Array.isArray(raw.items)) throw new Error(`个人资料文件不支持内容条编辑：${relativeFile}`);
+    raw.items = raw.items.filter(item => String(item?.id || '') !== String(removal?.itemId || ''));
+    await writeAtomic(filePath, yamlDump(raw, { noRefs: true, lineWidth: 120 }));
+  }
+
+  for (const addition of Array.isArray(payload?.newItems) ? payload.newItems : []) {
+    const relativeFile = String(addition?.sourceFile || '').replace(/\\/g, '/');
+    const filePath = resolve(paths.root, relativeFile);
+    if (!isWithinRoot(filePath, paths.profileDir) || !['.yml', '.yaml'].includes(extname(filePath).toLowerCase())) {
+      throw new Error(`非法内容条文件路径：${relativeFile}`);
+    }
+    if (!existsSync(filePath)) {
+      if (relativeFile !== 'workflow-input/profile/skills/custom.yml') throw new Error(`个人资料文件不存在：${relativeFile}`);
+      await mkdir(dirname(filePath), { recursive: true });
+      await writeAtomic(filePath, yamlDump({ id: 'skill-custom', type: 'skill', title: '自定义技能', items: [] }, { noRefs: true, lineWidth: 120 }));
+    }
+    const raw = yamlLoad(await readFile(filePath, 'utf8')) || {};
+    if (!Array.isArray(raw.items)) throw new Error(`个人资料文件不支持内容条编辑：${relativeFile}`);
+    const content = String(addition?.content || '').trim();
+    const title = String(addition?.title || '').trim();
+    if (!title) throw new Error('新增技能需要填写名称。');
+    const item = { id: `item-${randomUUID()}`, title, content, include_in_cv: addition?.includeInCv !== false };
+    if (!['education'].includes(raw.type)) item.familiarity = Math.min(5, Math.max(1, Math.round(Number(addition?.familiarity) || 3)));
+    raw.items.push(item);
+    await writeAtomic(filePath, yamlDump(raw, { noRefs: true, lineWidth: 120 }));
+  }
 
   for (const change of Array.isArray(payload?.changes) ? payload.changes : []) {
     const relativeFile = String(change?.sourceFile || '').replace(/\\/g, '/');

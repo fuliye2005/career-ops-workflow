@@ -4,25 +4,71 @@ title: 运营与项目协作
 items:
   - id: skill-operations-needs
     title: 用户需求与反馈分析
-    content: 收集用户反馈、客服工单和产品问题，进行主题分类、优先级整理并形成需求卡片。
+    content: 从访谈、工单、培训和社群收集反馈，保留场景与用户原话，补充影响范围、复现步骤和待确认点，再按主题归类并整理为需求卡片；演示档案口径为年度约 240 条、8 个主题。
     familiarity: 4
-    role_tags: [AI 产品运营, 产品运营, 用户运营]
-    domain_tags: [用户研究, 需求分析, 反馈分析]
+    role_tags:
+      - AI 产品运营
+      - 产品运营
+      - 用户运营
+    domain_tags:
+      - 用户研究
+      - 需求分析
+      - 反馈分析
     evidence_level: confirmed
     include_in_cv: true
   - id: skill-operations-content
     title: 内容与知识库运营
-    content: 维护帮助文档、案例文章、FAQ 和用户教育内容，参与内容排期与发布复盘。
+    content: 按用户任务组织帮助内容，维护适用版本、审核人与更新时间；参与约 58 篇内容编写或更新及 20 余条 FAQ 补充，并结合客服问题和培训反馈修订（虚构演示数据）。
     familiarity: 4
-    role_tags: [产品运营, 用户运营, 客户成功]
-    domain_tags: [内容运营, 知识库, FAQ]
+    role_tags:
+      - 产品运营
+      - 用户运营
+      - 客户成功
+    domain_tags:
+      - 内容运营
+      - 知识库
+      - FAQ
     evidence_level: confirmed
     include_in_cv: true
   - id: skill-operations-project
     title: 项目推进与跨团队协作
-    content: 协调产品、技术支持、客户成功和设计团队，跟进上线问题和运营活动交付。
+    content: 将上线与运营事项拆成检查项、协作人和时间节点，协调产品、技术支持、客户成功与设计跟进问题状态；上线后回收反馈、补充复现信息或更新帮助内容，不代表独立负责产品路线图。
     familiarity: 4
-    role_tags: [AI 产品运营, 自动化运营, 项目运营]
-    domain_tags: [项目管理, 协作, 上线跟进]
+    role_tags:
+      - AI 产品运营
+      - 自动化运营
+      - 项目运营
+    domain_tags:
+      - 项目管理
+      - 协作
+      - 上线跟进
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: skill-operations-training
+    title: 用户培训与新手引导
+    content: 围绕首次使用任务制作分步骤指引、线上培训和答疑材料；演示经历包括 12 场培训、约 160 人次参与及 30 余条会后问题归类，并把理解障碍反馈给产品团队。
+    familiarity: 4
+    role_tags:
+      - AI 产品运营
+      - 用户运营
+      - 客户成功
+    domain_tags:
+      - 培训
+      - 用户教育
+      - 新手引导
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: skill-operations-ai-review
+    title: AI 内容核对与编辑
+    content: 使用 AI 辅助形成 FAQ、说明或运营材料初稿，再核对原始来源、事实、产品术语和用户表达并人工编辑；不声称承担模型算法评测或调优。
+    familiarity: 4
+    role_tags:
+      - AI 产品运营
+      - 内容运营
+      - 自动化运营
+    domain_tags:
+      - 生成式 AI
+      - 内容审核
+      - 事实核查
     evidence_level: confirmed
     include_in_cv: true

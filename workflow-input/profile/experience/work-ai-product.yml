@@ -6,25 +6,84 @@ period: 2023.07—至今
 items:
   - id: work-ai-product-feedback
     title: 用户需求与版本反馈
-    content: 负责企业 AI 助手和知识库产品的用户需求收集、问题分类与版本反馈，将客户反馈整理为需求卡片并协助维护季度迭代清单。
+    content: >-
+      一个年度周期整理约 240 条来自客户访谈、工单、培训和社群的反馈，按知识覆盖、回答质量、权限配置、引导体验等 8 类维护问题台账；将高频且可复现的问题整理成需求卡片，每季度同步约 15—20
+      项候选需求，持续跟进但不代替产品负责人决策优先级。
     familiarity: 4
-    role_tags: [AI 产品运营, 产品运营]
-    domain_tags: [AI 产品, 需求分析, 用户反馈]
+    role_tags:
+      - AI 产品运营
+      - 产品运营
+    domain_tags:
+      - AI 产品
+      - 需求分析
+      - 用户反馈
     evidence_level: confirmed
     include_in_cv: true
   - id: work-ai-product-onboarding
     title: 新用户上手与运营支持
-    content: 设计新用户上手流程和使用指引，参与线上培训、问题答疑和上线问题跟进。
+    content: 设计新用户上手流程与分角色指引，协助举办 12 场线上培训、累计约 160 人次参加；培训后整理 30 余条问题，区分知识缺口、操作误解和产品问题并安排跟进。
     familiarity: 4
-    role_tags: [AI 产品运营, 用户运营, 客户成功]
-    domain_tags: [用户教育, 培训, 上线跟进]
+    role_tags:
+      - AI 产品运营
+      - 用户运营
+      - 客户成功
+    domain_tags:
+      - 用户教育
+      - 培训
+      - 上线跟进
     evidence_level: confirmed
     include_in_cv: true
   - id: work-ai-product-ai-tools
     title: AI 工具辅助运营工作
-    content: 使用 AI 工具辅助整理会议记录、FAQ 和运营周报，与产品、客户成功和技术支持团队协作推进处理结果。
+    content: 使用 AI 工具辅助会议纪要、反馈初步聚类、FAQ 初稿和周报整理；每份对外材料回看原始反馈与产品信息并人工复核。按虚构演示统计口径，周度资料整理耗时约减少三成；与产品、客户成功和技术支持协作跟进处理结果。
     familiarity: 5
-    role_tags: [AI 产品运营, 自动化运营]
-    domain_tags: [AI 工具, Workflow, 协作]
+    role_tags:
+      - AI 产品运营
+      - 自动化运营
+    domain_tags:
+      - AI 工具
+      - Workflow
+      - 协作
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: work-ai-product-issue-tracking
+    title: 用户问题台账与协作跟进
+    content: 维护问题场景、复现信息、影响范围和处理状态，协助产品与技术支持定位，并跟踪后续反馈。
+    familiarity: 4
+    role_tags:
+      - AI 产品运营
+      - 产品运营
+      - 客户成功
+    domain_tags:
+      - 用户反馈
+      - 问题管理
+      - 跨团队协作
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: work-ai-product-knowledge
+    title: 知识库和上线材料维护
+    content: 与内容负责人共同维护约 36 篇帮助文章及 FAQ，按季度复核更新日期、功能截图和负责人；产品变更时检查受影响页面，上线后回填已确认的解决方式。
+    familiarity: 4
+    role_tags:
+      - AI 产品运营
+      - 内容运营
+      - 客户成功
+    domain_tags:
+      - 知识库
+      - 用户教育
+      - 上线运营
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: work-ai-product-answer-review
+    title: AI 助手问题分类
+    content: 对 AI 助手回答不准确、知识覆盖不足和用户表达不清等情况做初步分类，整理可由运营、产品或技术分别跟进的问题。
+    familiarity: 3
+    role_tags:
+      - AI 产品运营
+      - 自动化运营
+    domain_tags:
+      - 生成式 AI
+      - 反馈分析
+      - 运营流程
     evidence_level: confirmed
     include_in_cv: true

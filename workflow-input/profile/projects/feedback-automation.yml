@@ -6,9 +6,29 @@ period: 2024.04—2024.09
 items:
   - id: project-feedback-automation-classify
     title: 反馈分类与跟进表
-    content: 使用表格和 AI 工具对客户反馈进行主题分类和优先级整理，设计“反馈—问题—负责人—处理状态”的跟进表结构。
+    content: 对一个季度的 186 条客户反馈进行 AI 初步归类、人工复核和去重，归入 7 个主题标签；保留用户原话、渠道和场景，并设计“反馈—问题—负责人—优先级—处理状态—复核日期”跟进表。
     familiarity: 4
-    role_tags: [AI 产品运营, 自动化运营, 用户运营]
-    domain_tags: [反馈分析, AI 工具, 流程设计]
+    role_tags:
+      - AI 产品运营
+      - 自动化运营
+      - 用户运营
+    domain_tags:
+      - 反馈分析
+      - AI 工具
+      - 流程设计
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: project-feedback-automation-loop
+    title: 反馈处理和状态跟进
+    content: 每月输出高频主题、典型原话、待确认问题和处理进展；试运行后月度人工汇总时间由约 4 小时降至 2.5 小时（虚构演示统计口径）。对低置信度或跨主题反馈单独标记，交由人工判断。
+    familiarity: 4
+    role_tags:
+      - AI 产品运营
+      - 自动化运营
+      - 用户运营
+    domain_tags:
+      - 反馈闭环
+      - 流程设计
+      - 协作
     evidence_level: confirmed
     include_in_cv: true
