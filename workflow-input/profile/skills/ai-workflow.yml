@@ -1,0 +1,31 @@
+id: skill-ai-workflow
+type: skill
+title: AI 工具与 Workflow
+items:
+  - id: skill-ai-workflow-use
+    title: AI 工具与 Workflow 实际使用
+    content: 将 AI 用于会议纪要、反馈初步归类、FAQ/周报初稿和资料结构化；能拆解输入、步骤与人工复核点，并在输出后核对原始来源，不把 AI 生成结果直接当作事实。
+    familiarity: 5
+    role_tags:
+      - AI 产品运营
+      - 自动化运营
+      - 产品运营
+    domain_tags:
+      - AI 工具
+      - Workflow
+      - 自动化
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: skill-ai-workflow-output-review
+    title: AI 输出问题初步归类
+    content: 对 AI 助手回答不准确、知识覆盖不足或用户表达不清的情况进行初步分类，整理为运营、产品或技术团队可分别跟进的问题；不声称搭建模型评测体系或进行算法调优。
+    familiarity: 3
+    role_tags:
+      - AI 产品运营
+      - 产品运营
+    domain_tags:
+      - AI 回答质量
+      - 问题分类
+      - 用户体验
+    evidence_level: confirmed
+    include_in_cv: true

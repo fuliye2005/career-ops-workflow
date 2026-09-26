@@ -1,0 +1,69 @@
+id: skill-product-operations
+type: skill
+title: 产品运营方法与工具
+items:
+  - id: skill-product-operations-interviews
+    title: 用户访谈与问题拆解
+    content: 能围绕具体使用场景收集问题，补充用户目标、触发步骤和当前影响，再整理为待确认事项。
+    familiarity: 4
+    role_tags:
+      - AI 产品运营
+      - 产品运营
+      - 用户运营
+    domain_tags:
+      - 用户研究
+      - 需求分析
+      - 问题拆解
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: skill-product-operations-requirements
+    title: 需求记录与版本跟进
+    content: 能把用户反馈整理为需求卡片和跟进项，补充背景、复现信息、当前状态及需要协作的团队。
+    familiarity: 4
+    role_tags:
+      - AI 产品运营
+      - 产品运营
+    domain_tags:
+      - 需求管理
+      - 版本反馈
+      - 项目推进
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: skill-product-operations-metrics
+    title: 基础运营数据观察
+    content: 能汇总活动、培训和用户反馈记录，比较基础变化并整理需要进一步核实的问题；尚未独立搭建复杂指标体系。
+    familiarity: 3
+    role_tags:
+      - AI 产品运营
+      - 产品运营
+      - 用户运营
+    domain_tags:
+      - 运营分析
+      - 数据整理
+      - 复盘
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: skill-product-operations-prototype
+    title: 原型阅读与问题标注
+    content: 能阅读页面原型、指出文字和流程问题并向设计或产品同事说明；不独立承担复杂交互设计。
+    familiarity: 2
+    role_tags:
+      - 产品运营
+      - AI 产品运营
+    domain_tags:
+      - 原型
+      - 产品协作
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: skill-product-operations-python
+    title: Python 入门接触
+    content: 仅有基础了解，当前不用于独立开发或复杂数据处理，不作为简历核心技能。
+    familiarity: 1
+    role_tags:
+      - AI 产品运营
+      - 自动化运营
+    domain_tags:
+      - Python
+      - 入门
+    evidence_level: confirmed
+    include_in_cv: false

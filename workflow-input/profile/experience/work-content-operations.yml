@@ -1,0 +1,60 @@
+id: work-content-operations
+type: experience
+title: 内容与用户运营
+organization: 上海知行智能科技有限公司
+period: 2021.07—2023.06
+items:
+  - id: work-content-docs
+    title: 产品内容与帮助文档
+    content: 两年内参与编写或更新约 58 篇帮助文档、案例文章和用户教育内容；根据用户反馈重排新手内容结构，推动补充 20 余条 FAQ。
+    familiarity: 4
+    role_tags:
+      - 产品运营
+      - 用户运营
+      - 客户成功
+    domain_tags:
+      - 内容策划
+      - 帮助文档
+      - 知识库
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: work-content-community
+    title: 社群与活动运营
+    content: 参与执行 14 场线上分享、产品答疑或用户活动，负责报名信息、提醒文案、主持串词和复盘数据；单场参与约 30—80 人，并协助维护约 400 人规模的产品社群。
+    familiarity: 4
+    role_tags:
+      - 用户运营
+      - 内容运营
+    domain_tags:
+      - 社群
+      - 活动运营
+      - 复盘
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: work-content-lifecycle
+    title: 新手内容与用户旅程
+    content: 按用户首次使用流程整理新手内容，将功能介绍调整为任务步骤、操作说明和常见问题，并与产品和客服核对。
+    familiarity: 4
+    role_tags:
+      - 产品运营
+      - 用户运营
+      - 内容运营
+    domain_tags:
+      - 用户旅程
+      - 新手引导
+      - 内容策划
+    evidence_level: confirmed
+    include_in_cv: true
+  - id: work-content-publishing
+    title: 内容排期与发布协作
+    content: 维护内容需求清单和发布排期，记录资料来源、审核人、渠道和状态，配合产品发布更新说明与答疑口径。
+    familiarity: 4
+    role_tags:
+      - 内容运营
+      - 产品运营
+    domain_tags:
+      - 内容管理
+      - 项目推进
+      - 发布协作
+    evidence_level: confirmed
+    include_in_cv: true

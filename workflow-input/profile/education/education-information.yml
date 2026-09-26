@@ -1,0 +1,11 @@
+id: education-information
+type: education
+title: 信息管理与信息系统
+organization: 上海应用技术大学
+period: 2017—2021
+items:
+  - id: education-information-degree
+    title: 本科
+    content: 信息管理与信息系统专业。
+    evidence_level: confirmed
+    include_in_cv: true
