@@ -31,16 +31,14 @@ Agent 使用 Career-Ops 能力分析岗位、准备技能建议/面试材料、�
 需要 Node.js。克隆项目并安装依赖后，在项目目录启动 Agent：
 
 ```bash
-git clone https://github.com/fuliye2005/career-ops-workflow.git
-cd career-ops-workflow
+git clone https://github.com/fuliye2005/career-flow-studio.git
+cd career-flow-studio
 npm install
 npm run workflow:serve
 codex
 ```
 
 在浏览器打开 `http://127.0.0.1:4173/` 查看本地工作台；再在项目目录启动 Codex，并用自然语言要求 Agent 评估岗位、生成定制材料或开展面试模拟。完整步骤、示例和截图位置见[使用教程](使用教程.md)。
-
-> 仓库名调整后，请将上面的 clone 地址替换为 GitHub 上显示的新地址。
 
 ## 资料与事实边界
 
