@@ -72,9 +72,9 @@ npm run workflow
 npm run workflow:serve
 ```
 
-打开 `http://127.0.0.1:4173/`，进入“可编辑”简历，修改后点击“保存最终版”。
+打开 `http://127.0.0.1:4173/`，进入岗位的 HTML 编辑页，修改后点击“保存修改”。HTML 会持续保持可编辑，无需另存为或确认“最终版”。
 
-确认 HTML 最终版后，生成 Word：
+要根据岗位当前的可编辑 HTML 手动生成 Word：
 
 ```powershell
 npm run workflow:word
@@ -83,10 +83,10 @@ npm run workflow:word
 Word 文件会写入 `output/workflow/<job-id>/`，文件名使用识别到的岗位名称，例如：
 
 ```text
-运维开发工程师-最终版.docx
+公司-运维开发工程师.docx
 ```
 
-从 `npm run workflow:serve` 打开的可编辑页面点击“保存最终版”时，workflow 会自动保存确认 HTML，并同时尝试生成 Word 和 PDF。PDF 文件名示例：
+从 `npm run workflow:serve` 打开的可编辑页面点击“保存修改”时，workflow 会将当前内容写回可编辑 HTML，并同时尝试更新 Word 和 PDF。PDF 文件名示例：
 
 ```text
 运维开发工程师.pdf

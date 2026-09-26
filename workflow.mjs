@@ -841,7 +841,7 @@ function renderSummaryHtml(records, jobs, root = ROOT) {
 <body><main class="shell">
 <header class="topbar"><div><div class="eyebrow">CAREER-OPS / WORKFLOW</div><h1 class="title">求职岗位总览</h1><nav style="display:flex;gap:8px;margin-top:12px"><a class="link" href="index.html">岗位总览</a><a class="link" href="profile.html">个人资料</a><a class="link" href="settings.html">导出设置</a></nav></div><div class="eyebrow">持续累计 · ${escapeHtml(new Date().toLocaleString('zh-CN'))}</div></header>
 <section class="summary"><div class="stat"><strong>${total}</strong><span>岗位总数</span></div><div class="stat"><strong>${evaluated}</strong><span>已评估</span></div><div class="stat"><strong>${ready}</strong><span>已有简历</span></div><div class="stat"><strong>${pdfPending}</strong><span>PDF 未确定</span></div></section>
-<section class="controls"><input id="search" type="search" placeholder="搜索公司、岗位、技能或建议"><select id="status"><option value="">全部状态</option><option>优先申请</option><option>建议申请</option><option>谨慎考虑</option><option>不建议申请</option><option>待评估</option><option>已确认</option></select><select id="score"><option value="">全部评分</option><option value="4.5">4.5+</option><option value="4">4.0+</option><option value="3.5">3.5+</option></select><select id="pdf"><option value="">全部 PDF 状态</option><option value="pending">PDF 未确定</option><option value="ready">PDF 已生成</option></select><select id="sort"><option value="time-desc">最近更新（默认）</option><option value="score-desc">评分排序</option><option value="time-asc">最早更新</option></select></section>
+<section class="controls"><input id="search" type="search" placeholder="搜索公司、岗位、技能或建议"><select id="status"><option value="">全部状态</option><option>优先申请</option><option>建议申请</option><option>谨慎考虑</option><option>不建议申请</option><option>待评估</option><option>可编辑</option></select><select id="score"><option value="">全部评分</option><option value="4.5">4.5+</option><option value="4">4.0+</option><option value="3.5">3.5+</option></select><select id="pdf"><option value="">全部 PDF 状态</option><option value="pending">PDF 未确定</option><option value="ready">PDF 已生成</option></select><select id="sort"><option value="time-desc">最近更新（默认）</option><option value="score-desc">评分排序</option><option value="time-asc">最早更新</option></select></section>
 <section id="jobs" class="job-list">${rowHtml || '<div class="empty">还没有岗位。把 URL 写进 jds/jobs.txt，或把 JD 文件放入 jds/。</div>'}</section>
 </main><script>
 const rows=[...document.querySelectorAll('.job-row')];
@@ -1308,11 +1308,8 @@ async function renderSummary(root = ROOT) {
 }
 
 function editableInjection(html, jobId) {
-const injection = `<style id="workflow-editor-style">.workflow-toolbar{position:sticky;top:0;z-index:9999;display:flex;gap:8px;align-items:center;padding:10px 14px;background:#202a33;color:#fff;font:14px Segoe UI,Arial,sans-serif;box-shadow:0 2px 8px #0002}.workflow-toolbar button{border:1px solid #9fb1bf;border-radius:4px;background:#fff;color:#202a33;padding:6px 10px;font:inherit;cursor:pointer}.workflow-toolbar button:disabled{opacity:.65;cursor:wait}.workflow-toolbar span{font-size:12px;color:#d5e0e8}.workflow-edit-target{outline:2px dashed #2780c2;outline-offset:3px}</style><div id="workflow-toolbar" class="workflow-toolbar" contenteditable="false"><strong>Career-Ops 简历编辑</strong><button type="button" id="workflow-save">保存最终版</button><span id="workflow-message">修改文字后点击保存</span></div><script data-workflow-editor="true">(function(){const jobId=${JSON.stringify(jobId)};const target=document.querySelector('.page');const button=document.querySelector('#workflow-save');const message=document.querySelector('#workflow-message');const saveUrl=location.protocol==='file:'?'http://127.0.0.1:4173/__workflow/save':'/__workflow/save';if(!target||!button||!message)return;target.classList.add('workflow-edit-target');target.setAttribute('contenteditable','true');target.addEventListener('input',()=>{message.textContent='有未保存修改'});button.addEventListener('click',async()=>{button.disabled=true;message.textContent='正在保存并生成 Word…';try{const clone=document.documentElement.cloneNode(true);clone.querySelector('#workflow-toolbar')?.remove();clone.querySelector('#workflow-editor-style')?.remove();clone.querySelectorAll('script[data-workflow-editor]').forEach(el=>el.remove());clone.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));clone.querySelectorAll('.workflow-edit-target').forEach(el=>el.classList.remove('workflow-edit-target'));const res=await fetch(saveUrl,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jobId,html:'<!doctype html>\\n'+clone.outerHTML})});let data={};try{data=await res.json()}catch{}if(!res.ok||!data.ok)throw new Error(data.error||'服务器返回错误');message.textContent=data.warning||!data.word?'已保存最终版，Word 生成失败':'已保存最终版，Word 已生成';}catch(error){message.textContent='保存失败：'+(error?.message||'请先运行 npm run workflow:serve');}finally{button.disabled=false;}});})();</script>`;
-  const adjustedInjection = injection
-    .replace('正在保存并生成 Word…', '正在保存并生成 Word/PDF…')
-    .replace('已保存最终版，Word 已生成', '已保存最终版，Word/PDF 已生成');
-  return html.includes('</body>') ? html.replace('</body>', `${adjustedInjection}</body>`) : `${html}${adjustedInjection}`;
+const injection = `<style id="workflow-editor-style">.workflow-toolbar{position:sticky;top:0;z-index:9999;display:flex;gap:8px;align-items:center;padding:10px 14px;background:#202a33;color:#fff;font:14px Segoe UI,Arial,sans-serif;box-shadow:0 2px 8px #0002}.workflow-toolbar button{border:1px solid #9fb1bf;border-radius:4px;background:#fff;color:#202a33;padding:6px 10px;font:inherit;cursor:pointer}.workflow-toolbar button:disabled{opacity:.65;cursor:wait}.workflow-toolbar span{font-size:12px;color:#d5e0e8}.workflow-edit-target{outline:2px dashed #2780c2;outline-offset:3px}</style><div id="workflow-toolbar" class="workflow-toolbar" contenteditable="false"><strong>Career-Ops 简历编辑</strong><button type="button" id="workflow-save">保存修改</button><span id="workflow-message">修改后点击保存，保存后仍可继续编辑</span></div><script data-workflow-editor="true">(function(){const jobId=${JSON.stringify(jobId)};const target=document.querySelector('.page');const button=document.querySelector('#workflow-save');const message=document.querySelector('#workflow-message');const saveUrl=location.protocol==='file:'?'http://127.0.0.1:4173/__workflow/save':'/__workflow/save';if(!target||!button||!message)return;target.classList.add('workflow-edit-target');target.setAttribute('contenteditable','true');target.addEventListener('input',()=>{message.textContent='有未保存修改'});button.addEventListener('click',async()=>{button.disabled=true;message.textContent='正在保存修改并更新材料…';try{const clone=document.documentElement.cloneNode(true);clone.querySelector('#workflow-toolbar')?.remove();clone.querySelector('#workflow-editor-style')?.remove();clone.querySelectorAll('script[data-workflow-editor]').forEach(el=>el.remove());clone.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));clone.querySelectorAll('.workflow-edit-target').forEach(el=>el.classList.remove('workflow-edit-target'));const res=await fetch(saveUrl,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jobId,html:'<!doctype html>\\n'+clone.outerHTML})});let data={};try{data=await res.json()}catch{}if(!res.ok||!data.ok)throw new Error(data.error||'服务器返回错误');message.textContent=data.warning?'修改已保存；'+data.warning:data.word&&data.pdf?'修改已保存，Word 和 PDF 已更新':'修改已保存';}catch(error){message.textContent='保存失败：'+(error?.message||'请先运行 npm run workflow:serve');}finally{button.disabled=false;}});})();</script>`;
+  return html.includes('</body>') ? html.replace('</body>', `${injection}</body>`) : `${html}${injection}`;
 }
 
 async function prepareEditable(jobId, root = ROOT) {
@@ -1328,17 +1325,59 @@ async function prepareEditable(jobId, root = ROOT) {
   const finalPath = record.artifacts?.finalHtml
     ? resolveResumeArtifact(record, 'finalHtml', root, id, '最终版', 'html', 'cv.final.html')
     : null;
-  const sourcePath = finalPath && existsSync(finalPath) ? finalPath : generated;
+  const sourcePath = existsSync(editable) ? editable : finalPath && existsSync(finalPath) ? finalPath : generated;
   const source = await readFile(sourcePath, 'utf8');
-  const editableSource = source.includes('data-workflow-editor="true"') ? source : editableInjection(cleanEditableHtml(source), id);
+  const editableSource = editableInjection(cleanEditableHtml(source), id);
   await writeAtomic(editable, editableSource);
   record.artifacts = { ...(record.artifacts || {}), generatedHtml: relative(root, generated).split(sep).join('/'), editableHtml: relative(root, editable).split(sep).join('/') };
-  record.resumeStatus = record.artifacts.finalHtml ? '已确认' : '可编辑';
+  delete record.artifacts.finalHtml;
+  record.resumeStatus = '可编辑';
   record.updatedAt = new Date().toISOString();
   await writeAtomic(recordFile, JSON.stringify(record, null, 2) + '\n');
   await writeMetadata(record, root);
   await renderSummary(root);
   return { jobId: id, editable: relative(root, editable).split(sep).join('/') };
+}
+
+async function saveEditableHtml(jobId, html, root = ROOT) {
+  if (typeof html !== 'string' || !html.includes('<html')) throw new Error('Invalid HTML payload');
+  if (Buffer.byteLength(html, 'utf8') > MAX_EDITABLE_HTML_BYTES) {
+    throw new Error(`HTML payload is too large (max ${Math.round(MAX_EDITABLE_HTML_BYTES / 1024 / 1024)} MB)`);
+  }
+  const paths = pathsFor(root);
+  const id = safeId(jobId);
+  const recordFile = join(paths.records, `${id}.json`);
+  const record = await readJson(recordFile);
+  if (!record) throw new Error(`Workflow record not found: ${jobId}`);
+  assertResumeGate(record);
+  const outputDir = join(paths.output, id);
+  await mkdir(outputDir, { recursive: true });
+  const editablePath = record.artifacts?.editableHtml
+    ? resolveWorkspacePath(root, record.artifacts.editableHtml)
+    : join(outputDir, `${resumeFileName(record)}-可编辑.html`);
+  await writeAtomic(editablePath, withA4PreviewLayout(cleanEditableHtml(html)));
+  record.artifacts = { ...(record.artifacts || {}), editableHtml: relative(root, editablePath).split(sep).join('/') };
+  delete record.artifacts.finalHtml;
+  delete record.artifacts.finalHtmlHistory;
+  delete record.artifacts.word;
+  delete record.artifacts.wordExport;
+  delete record.artifacts.pdf;
+  delete record.artifacts.pdfExport;
+  record.resumeStatus = '可编辑';
+  record.updatedAt = new Date().toISOString();
+  await writeAtomic(recordFile, JSON.stringify(record, null, 2) + '\n');
+  await writeMetadata(record, root);
+  await renderSummary(root);
+  return { path: relative(root, editablePath).split(sep).join('/') };
+}
+
+function editableResumePath(record, root, id) {
+  for (const key of ['editableHtml', 'finalHtml', 'generatedHtml']) {
+    if (!record?.artifacts?.[key]) continue;
+    const path = resolveResumeArtifact(record, key, root, id, key, 'html', key === 'generatedHtml' ? 'cv.generated.html' : 'cv.final.html');
+    if (existsSync(path)) return path;
+  }
+  return null;
 }
 
 async function saveFinalHtml(jobId, html, root = ROOT) {
@@ -1406,15 +1445,15 @@ async function createRenderSource(finalPath) {
 
 async function renderWord(jobId, root = ROOT) {
   const paths = pathsFor(root);
-  const id = await resolveRecordId(jobId, root, 'finalHtml');
+  const id = await resolveRecordId(jobId, root, 'editableHtml');
   const recordFile = join(paths.records, `${id}.json`);
   const record = await readJson(recordFile);
   if (!record) throw new Error(`Workflow record not found: ${jobId}`);
   assertResumeGate(record);
-  const finalPath = resolveResumeArtifact(record, 'finalHtml', root, id, '最终版', 'html', 'cv.final.html');
-  if (!existsSync(finalPath)) throw new Error(`Final HTML is not confirmed: ${finalPath}`);
+  const sourcePath = editableResumePath(record, root, id);
+  if (!sourcePath) throw new Error(`Editable HTML not found for workflow record: ${id}`);
   const wordPath = join(paths.output, id, `${resumeFileName(record)}.docx`);
-  const renderSource = await createRenderSource(finalPath);
+  const renderSource = await createRenderSource(sourcePath);
   let result;
   try {
     result = spawnSync(process.execPath, [
@@ -1435,7 +1474,7 @@ async function renderWord(jobId, root = ROOT) {
     await copyFile(wordPath, exportPath);
     record.artifacts.wordExport = exportPath;
   }
-  record.resumeStatus = '已生成 Word';
+  record.resumeStatus = '可编辑';
   record.updatedAt = new Date().toISOString();
   await writeAtomic(recordFile, JSON.stringify(record, null, 2) + '\n');
   await writeMetadata(record, root);
@@ -1444,15 +1483,15 @@ async function renderWord(jobId, root = ROOT) {
 }
 async function renderPdf(jobId, root = ROOT) {
   const paths = pathsFor(root);
-  const id = await resolveRecordId(jobId, root, 'finalHtml');
+  const id = await resolveRecordId(jobId, root, 'editableHtml');
   const recordFile = join(paths.records, `${id}.json`);
   const record = await readJson(recordFile);
   if (!record) throw new Error(`Workflow record not found: ${jobId}`);
   assertResumeGate(record);
-  const finalPath = resolveResumeArtifact(record, 'finalHtml', root, id, '最终版', 'html', 'cv.final.html');
-  if (!existsSync(finalPath)) throw new Error(`Final HTML is not confirmed: ${finalPath}`);
+  const sourcePath = editableResumePath(record, root, id);
+  if (!sourcePath) throw new Error(`Editable HTML not found for workflow record: ${id}`);
   const pdfPath = join(paths.output, id, `${resumeFileName(record)}.pdf`);
-  const renderSource = await createRenderSource(finalPath);
+  const renderSource = await createRenderSource(sourcePath);
   let result;
   try {
     const factCheck = spawnSync(process.execPath, [
@@ -1478,7 +1517,7 @@ async function renderPdf(jobId, root = ROOT) {
     await copyFile(pdfPath, exportPath);
     record.artifacts.pdfExport = exportPath;
   }
-  record.resumeStatus = '已生成 PDF';
+  record.resumeStatus = '可编辑';
   record.updatedAt = new Date().toISOString();
   await writeAtomic(recordFile, JSON.stringify(record, null, 2) + '\n');
   await writeMetadata(record, root);
@@ -1579,6 +1618,7 @@ export {
   safeId,
   saveRecord,
   saveFinalHtml,
+  saveEditableHtml,
   saveProfile,
   saveWorkflowSettings,
 };

@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, normalize, resolve, sep } from 'node:path';
-import { ROOT, deleteWorkflowJob, pathsFor, prepareEditable, renderPdf, renderSummary, renderWord, saveFinalHtml, saveProfile, saveWorkflowSettings } from './workflow.mjs';
+import { ROOT, deleteWorkflowJob, pathsFor, prepareEditable, renderPdf, renderSummary, renderWord, saveEditableHtml, saveProfile, saveWorkflowSettings } from './workflow.mjs';
 
 const PORT = Number(process.env.WORKFLOW_PORT || process.argv[2] || 4173);
 const MAX_REQUEST_BODY_BYTES = 20 * 1024 * 1024;
@@ -55,7 +55,7 @@ const server = createServer(async (request, response) => {
     }
     if (request.method === 'POST' && request.url === '/__workflow/save') {
       const body = await bodyJson(request);
-      const result = await saveFinalHtml(body.jobId, body.html, SERVE_ROOT);
+      const result = await saveEditableHtml(body.jobId, body.html, SERVE_ROOT);
       let word = null;
       let pdf = null;
       const warnings = [];

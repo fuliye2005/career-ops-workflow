@@ -79,14 +79,13 @@ output/workflow/<job-id>/
 `-- metadata.json
 ```
 
-- `cv.generated.html`：系统自动生成版，不允许被后续运行覆盖。
-- `cv.editable.html`：浏览器编辑入口。
-- `cv.final.html`：用户人工修改并确认后的版本。
-- `<岗位名称>-最终版.docx`：确认 HTML 后通过 workflow 生成的可编辑 Word 版本。
-- `<岗位名称>.pdf`：确认 HTML 后生成的 PDF，不再添加“最终版”后缀。
+- `cv.generated.html`：系统自动生成的初稿。
+- `cv.editable.html`：浏览器编辑入口；保存修改后持续写回此 HTML，没有单独的定型文件。
+- `<公司>-<岗位名称>.docx`：从当前可编辑 HTML 生成的 Word 版本。
+- `<公司>-<岗位名称>.pdf`：从当前可编辑 HTML 生成的 PDF。
 - `metadata.json`：记录岗位 ID、评分、报告、模板、版本和文件状态。
 
-HTML 简历应保留固定版式，允许用户在浏览器中直接修改文字。重新运行 workflow 时必须保留已有人工确认版本，并创建新版本或等待用户决定。
+HTML 简历应保留固定版式，允许用户在浏览器中直接修改文字。重新运行 workflow 时必须保留用户已保存的 HTML 修改。
 
 ## Cumulative Summary
 
@@ -131,7 +130,7 @@ output/workflow/index.html
 - `career-ops workflow` 可以完成资料检查、JD 导入、批量评估和结果汇总。
 - URL、截图、PDF、DOCX、TXT 和 Markdown JD 均有明确处理路径。
 - 评分门槛 `>3.0/5` 被正确执行。
-- HTML 简历可以在浏览器中编辑并保存最终版本。
+- HTML 简历页面本身就是编辑界面；保存修改会写回可编辑 HTML，不存在单独的“定型/最终版”步骤。
 - `output/workflow/index.html` 能持续累积历史岗位和有效快捷入口。
 - 编辑页保存可以生成 PDF，且保存后总览页应显示有效 PDF 链接。
 - 相关自动化测试通过。
