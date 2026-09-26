@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from 'node:http';
+import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, normalize, resolve, sep } from 'node:path';
@@ -46,9 +47,46 @@ function sendJson(response, status, value) {
   response.end(text);
 }
 
+function chooseWindowsDirectory() {
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    "$ProgressPreference = 'SilentlyContinue'",
+    'Add-Type -AssemblyName System.Windows.Forms',
+    '$owner = New-Object System.Windows.Forms.Form',
+    '$owner.TopMost = $true',
+    '$owner.ShowInTaskbar = $false',
+    '$owner.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None',
+    '$owner.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen',
+    '$owner.Width = 1; $owner.Height = 1; $owner.Opacity = 0',
+    '$owner.Show()',
+    '$dialog = New-Object System.Windows.Forms.FolderBrowserDialog',
+    "$dialog.Description = '选择简历导出文件夹'",
+    '$dialog.ShowNewFolderButton = $true',
+    'try { if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); [Console]::Write($dialog.SelectedPath); exit 0 }; exit 2 } finally { $dialog.Dispose(); $owner.Close(); $owner.Dispose() }',
+  ].join('; ');
+  return new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn('powershell.exe', ['-NoProfile', '-STA', '-Command', script], {
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8').on('data', chunk => { stdout += chunk; });
+    child.stderr.setEncoding('utf8').on('data', chunk => { stderr += chunk; });
+    child.once('error', rejectPromise);
+    child.once('close', code => {
+      if (code === 2) return resolvePromise({ cancelled: true });
+      if (code !== 0) return rejectPromise(new Error(stderr.trim() || `文件夹选择窗口退出，代码：${code}`));
+      const path = stdout.trim();
+      if (!path) return rejectPromise(new Error('未能读取所选文件夹路径'));
+      resolvePromise({ cancelled: false, path });
+    });
+  });
+}
+
 const server = createServer(async (request, response) => {
   try {
-    if (request.method === 'OPTIONS' && ['/__workflow/save', '/__workflow/delete', '/__workflow/profile/save', '/__workflow/profile/export', '/__workflow/profile/import', '/__workflow/settings/save'].includes(request.url)) {
+    if (request.method === 'OPTIONS' && ['/__workflow/save', '/__workflow/delete', '/__workflow/profile/save', '/__workflow/profile/export', '/__workflow/profile/import', '/__workflow/settings/save', '/__workflow/pick-directory'].includes(request.url)) {
       response.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type' });
       response.end();
       return;
@@ -107,6 +145,18 @@ const server = createServer(async (request, response) => {
         const body = await bodyJson(request);
         const settings = await saveWorkflowSettings(body, SERVE_ROOT);
         sendJson(response, 200, { ok: true, settings });
+      } catch (error) {
+        sendJson(response, 400, { ok: false, error: error.message });
+      }
+      return;
+    }
+    if (request.method === 'POST' && request.url === '/__workflow/pick-directory') {
+      try {
+        const body = await bodyJson(request);
+        if (!['pdfExportDir', 'wordExportDir'].includes(body.field)) throw new Error('无效的导出目录字段');
+        if (process.platform !== 'win32') throw new Error('系统文件夹选择目前仅支持 Windows；也可以直接输入绝对路径');
+        const selection = await chooseWindowsDirectory();
+        sendJson(response, 200, { ok: true, ...selection });
       } catch (error) {
         sendJson(response, 400, { ok: false, error: error.message });
       }
